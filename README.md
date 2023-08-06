@@ -142,7 +142,7 @@ This theme is based off of the lovely [Bear Blog](https://github.com/HermanMarti
  extend astro.config.mjs with
 
      site: 'https://roebi.github.io',
-     base: '/roebi-halter-in-template-blog'
+     base: '/roebi-halter-in-blog'
 
 add file .github/workflows/deploy.yml
 with content from docu
