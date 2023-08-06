@@ -78,9 +78,7 @@ This theme is based off of the lovely [Bear Blog](https://github.com/HermanMarti
 
       dir   Where should we create your new project?
             ./
-
-     tmpl   How would you like to start your new project?
-            Include sample files
+     tmpl   tmpl Using blog as project template
         ✔  Template copied
 
      deps   Install dependencies?
