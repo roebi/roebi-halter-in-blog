@@ -1,16 +1,16 @@
 ---
 import HeaderLink from './HeaderLink.astro';
 import { SITE_TITLE } from '../consts';
-import defineConfig from '../../astro.config.mjs';
+// import defineConfig from '../../astro.config.mjs';
 ---
 
 <header>
 	<nav>
-		<h2><a href={`${defineConfig.base}/`}>{SITE_TITLE}</a></h2>
+		<h2><a href="/roebi-halter-in-blog/">{SITE_TITLE}</a></h2>
 		<div class="internal-links">
-			<HeaderLink href={`${defineConfig.base}/`}>Home</HeaderLink>
-			<HeaderLink href={`${defineConfig.base}/blog`}>Blog</HeaderLink>
-			<HeaderLink href={`${defineConfig.base}/about`}>About</HeaderLink>
+			<HeaderLink href="/roebi-halter-in-blog/">Home</HeaderLink>
+			<HeaderLink href="/roebi-halter-in-blog/blog">Blog</HeaderLink>
+			<HeaderLink href="/roebi-halter-in-blog/about">About</HeaderLink>
 		</div>
 		<div class="social-links">
 			<a href="https://techhub.social/@roebi" target="_blank">
