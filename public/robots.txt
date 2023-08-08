@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://roebi.github.io/roebi-halter-in-blog/sitemap-index.xml
