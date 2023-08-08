@@ -20,6 +20,12 @@ Have you ever heard of this HTML 5 tags ?
             <aside> and
       <footer>
 ```
-# If not,
+# if not,
 
 then take a closer look at this template and use it for your ideas and projects!
+
+# travel to
+
+[Demo](https://roebi.github.io/01-01-vanilla-HTML5-starter-page/)
+
+[Git Repo roebi/01-01-vanilla-HTML5-starter-page](https://github.com/roebi/01-01-vanilla-HTML5-starter-page)

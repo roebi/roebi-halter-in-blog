@@ -27,8 +27,16 @@ This is where the web server comes into play.
 
 # Well and what does podman mean?
 
-Podman is a open source container tool. I embed the go webserer in a Dockerfile and let it run in Podman. And more there is a Podman Desktop tool, it is an open source graphical tool to work with containers. The Project readme.md explains all in detail.
+Podman is a open source container tool. I embed the go webserver in a Dockerfile and let it run in Podman. And more there is a Podman Desktop tool, it is an open source graphical tool to work with containers. The Project readme.md explains all in detail.
 
 # explore
 
 and run your first webproject with externals files.
+
+# travel to, explore
+
+and run your first webproject with externals files.
+
+[Git Repo roebi/01-02-Webserver-in-Go-on-Podman](https://github.com/roebi/01-02-Webserver-in-Go-on-Podman)
+
+remark: You can make a own repository from this template and then work in your own repository.
