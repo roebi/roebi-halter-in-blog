@@ -4,6 +4,8 @@ import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import FormattedDate from '../components/FormattedDate.astro';
+import { GITHUB_OWNER_HTML_URL, GITHUB_API_PROJECT_URL } from '../consts';
+import jp from 'jsonpath';
 // with in package.json:
 //   dependecies: {
 //     "astro-github-api-plugin": "file:../astro-github-api-plugin"
@@ -11,6 +13,21 @@ import FormattedDate from '../components/FormattedDate.astro';
 // import AstroGithubApiPlugin from '../../../astro-github-api-plugin';
 
 type Props = CollectionEntry<'blog'>['data'];
+
+// const response = await fetch('GITHUB_API_PROJECT_URL');
+// const data = await response.json();
+// based on
+// file:///C:/d/r/astro-github-api-plugin/01-01-vanilla-HTML5-starter-page.json
+const data = {
+	"topics": [
+    "html5",
+    "html5-template",
+    "roebi",
+    "starter"
+  ]
+};
+// https://www.npmjs.com/package/jsonpath MIT License
+const githubTopics = jp.query(data, '$.topics[*]') as Array<String>;
 
 const { title, description, pubDate, updatedDate, heroImage, githubName } = Astro.props;
 ---
@@ -127,7 +144,17 @@ const { title, description, pubDate, updatedDate, heroImage, githubName } = Astr
 			<article>
 				<div class="prose">
 				    <hr />
-				    GitHub Repo {githubName}
+					<div>Topics</div>
+					<div class="topics">
+                    {githubTopics.sort().map((topic) => (
+						<p class="topic"><a href={`/topic/${topic}`}>{topic}</a></p>
+					))}
+					</div>
+				    <div>GitHub Repo</div>
+					    <div class="topics">
+				            <p class="topic"><a href={`${GITHUB_OWNER_HTML_URL}${githubName}`} target="_blank">{githubName}</a></p>
+						</div>
+				    </div>
 			    </div>
 			</article>
 		    }
@@ -135,3 +162,19 @@ const { title, description, pubDate, updatedDate, heroImage, githubName } = Astr
 		<Footer />
 	</body>
 </html>
+
+<style>
+  .topics {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 auto;
+  }
+
+  .topic {
+    margin: 0.25em;
+    border: dotted 1px;
+    border-radius: .5em;
+    padding: .3em 0.8em;
+    font-size: 1.10em;
+  }
+</style>
