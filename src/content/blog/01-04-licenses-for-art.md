@@ -3,6 +3,7 @@ title: '01-04 licenses for art'
 description: 'permissions, conditions and limitations of license for art - give and take'
 pubDate: 'August 14 2023'
 heroImage: '/blog-placeholder-3.jpg'
+githubName: ''
 ---
 
 # What is this about?

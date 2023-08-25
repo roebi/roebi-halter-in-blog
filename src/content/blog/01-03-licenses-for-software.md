@@ -3,6 +3,7 @@ title: '01-03 licenses for software'
 description: 'permissions, conditions and limitations of license for software - give and take'
 pubDate: 'August 14 2023'
 heroImage: '/blog-placeholder-2.jpg'
+githubName: ''
 ---
 
 # What is this about?
