@@ -8,7 +8,7 @@ import FormattedDate from '../../components/FormattedDate.astro';
 // import defineConfig from '../../../astro.config.mjs'
 
 // -1 * : newest Blog on top
-const posts = (await getCollection('blog')).sort(
+const blogPosts = (await getCollection('blog')).sort(
 	(a, b) => -1 * (a.data.pubDate.valueOf() - b.data.pubDate.valueOf())
 );
 ---
@@ -93,13 +93,13 @@ const posts = (await getCollection('blog')).sort(
 			<section>
 				<ul>
 					{
-						posts.map((post) => (
+						blogPosts.map((blogPost) => (
 							<li>
-								<a href={`/roebi-halter-in-blog/blog/${post.slug}/`}>
-									<img width={720} height={360} src={`/roebi-halter-in-blog${post.data.heroImage}`} alt="" />
-									<h4 class="title">{post.data.title}</h4>
+								<a href={`/roebi-halter-in-blog/blog/${blogPost.slug}/`}>
+									<img width={720} height={360} src={`/roebi-halter-in-blog${blogPost.data.heroImage}`} alt="" />
+									<h4 class="title">{blogPost.data.title}</h4>
 									<p class="date">
-										<FormattedDate date={post.data.pubDate} />
+										<FormattedDate date={blogPost.data.pubDate} />
 									</p>
 								</a>
 							</li>

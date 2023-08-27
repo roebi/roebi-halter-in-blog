@@ -4,34 +4,15 @@ import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import FormattedDate from '../components/FormattedDate.astro';
-import { GITHUB_OWNER_HTML_URL, GITHUB_API_PROJECT_URL } from '../consts';
-import jp from 'jsonpath';
-// with in package.json:
-//   dependecies: {
-//     "astro-github-api-plugin": "file:../astro-github-api-plugin"
-//   }
-// import AstroGithubApiPlugin from '../../../astro-github-api-plugin';
+import { GITHUB_OWNER_HTML_URL } from '../consts';
+import { getGithubTopics } from '../scripts/githubApi';
 
 type Props = CollectionEntry<'blog'>['data'];
 
-// const response = await fetch('GITHUB_API_PROJECT_URL');
-// const data = await response.json();
-// based on
-// file:///C:/d/r/astro-github-api-plugin/01-01-vanilla-HTML5-starter-page.json
-const data = {
-	"topics": [
-    "html5",
-    "html5-template",
-    "roebi",
-    "starter"
-  ]
-};
-// https://www.npmjs.com/package/jsonpath MIT License
-const githubTopics = jp.query(data, '$.topics[*]') as Array<String>;
-
 const { title, description, pubDate, updatedDate, heroImage, githubName } = Astro.props;
+const githubTopics = await getGithubTopics(githubName)
+console.info('BlogPost.astro: githubTopics: ' + githubTopics);
 ---
-
 <html lang="en">
 	<head>
 		<BaseHead title={title} description={description} />
@@ -117,15 +98,16 @@ const { title, description, pubDate, updatedDate, heroImage, githubName } = Astr
                 <!-- <h3>Project List examples</h3> -->
 					<!-- known 'bug': List are handled with add all text in one, instaed embedd as a html ordered list -->
 					<!-- https://docs.astro.build/de/guides/styling/ -->
+				<!-- example of vertical ordered list -->
 				<!--
 					<style>
 					ol {
-	                  list-style: none; /* example of vertical ordered list */
+	                  list-style: none;
 	                }
 
                     li {
                       display: inline-block;
-                      margin-right: 10px; /* add spacing between items */
+                      margin-right: 10px;
                     }
 					</style>
                     <div>Project Topics 'topics' ordered list wrapped in a 'div' with class 'topiccls' (Press F12 for Debug Tools): 
@@ -144,9 +126,9 @@ const { title, description, pubDate, updatedDate, heroImage, githubName } = Astr
 			<article>
 				<div class="prose">
 				    <hr />
-					<div>Topics</div>
+					<div><a href="/roebi-halter-in-blog/topic">Topics</a></div>
 					<div class="topics">
-                    {githubTopics.sort().map((topic) => (
+                    {githubTopics.sort().map((topic: String) => (
 						<p class="topic"><a href={`/topic/${topic}`}>{topic}</a></p>
 					))}
 					</div>
