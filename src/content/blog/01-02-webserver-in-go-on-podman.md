@@ -3,6 +3,7 @@ title: '01-02 Webserver in Go on Podman'
 description: 'Webserver in Go on Podman'
 pubDate: 'August 07 2023'
 heroImage: '/blog-placeholder-4.jpg'
+githubName: '01-02-Webserver-in-Go-on-Podman'
 ---
 
 # What is this about?

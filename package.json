@@ -1,18 +1,24 @@
 {
   "name": "roebi-halter-in-blog",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
+    "astro": "astro",
     "build": "astro build",
+    "check": "astro check",
+    "dev": "astro dev",
+    "docs": "astro docs",
+    "help": "astro --help",
+    "info": "astro info",
     "preview": "astro preview",
-    "astro": "astro"
+    "sync": "astro sync",
+    "version": "astro --version"
   },
   "dependencies": {
     "@astrojs/mdx": "^0.19.7",
     "@astrojs/rss": "^2.4.4",
     "@astrojs/sitemap": "^2.0.2",
-    "astro": "^2.10.14"
+    "astro": "^2.10.14",
+    "jsonpath": "^1.1.1"
   }
 }

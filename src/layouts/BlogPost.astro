@@ -4,12 +4,15 @@ import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import FormattedDate from '../components/FormattedDate.astro';
+import { GITHUB_OWNER_HTML_URL } from '../consts';
+import { getGithubTopics } from '../scripts/githubApi';
 
 type Props = CollectionEntry<'blog'>['data'];
 
-const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
+const { title, description, pubDate, updatedDate, heroImage, githubName } = Astro.props;
+const githubTopics = await getGithubTopics(githubName)
+// console.info('BlogPost.astro: githubTopics: ' + githubTopics);
 ---
-
 <html lang="en">
 	<head>
 		<BaseHead title={title} description={description} />
@@ -76,10 +79,44 @@ const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
 						<h1>{title}</h1>
 						<hr />
 					</div>
-					<slot />
-				</div>
+                  <slot />
+                </div>
 			</article>
+			{ githubName &&
+			<article>
+				<div class="prose">
+				    <hr />
+					<div><a href="/roebi-halter-in-blog/topic">Topics</a></div>
+					<div class="topics">
+                    {githubTopics.sort().map((topic: String) => (
+						<p class="topic"><a href={`/roebi-halter-in-blog/topic/${topic}`}>{topic}</a></p>
+					))}
+					</div>
+				    <div>GitHub Repo</div>
+					    <div class="topics">
+				            <p class="topic"><a href={`${GITHUB_OWNER_HTML_URL}${githubName}`} target="_blank">{githubName}</a></p>
+						</div>
+				    </div>
+			    </div>
+			</article>
+		    }
 		</main>
 		<Footer />
 	</body>
 </html>
+
+<style>
+  .topics {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 auto;
+  }
+
+  .topic {
+    margin: 0.25em;
+    border: dotted 1px;
+    border-radius: .5em;
+    padding: .3em 0.8em;
+    font-size: 1.10em;
+  }
+</style>

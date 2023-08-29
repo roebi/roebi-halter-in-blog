@@ -1,0 +1,78 @@
+---
+import Layout from '../../layouts/BlogPost.astro';
+import BlogPostRef from '../../components/BlogPostRef.astro';
+import { getCollection, CollectionEntry } from 'astro:content';
+import { getGithubTopics } from '../../scripts/githubApi';
+
+export async function getStaticPaths() {
+
+  function getGitHubName(blogPost: CollectionEntry<'blog'>) {
+    return blogPost.data.githubName;
+  }
+
+  function getAllGitHubNames(allBlogPosts: Array<CollectionEntry<'blog'>>) {
+    const allGitHubNames = allBlogPosts.map((blogPost) => getGitHubName(blogPost));
+    const nonEmptyGitHubNames = allGitHubNames.filter((gitHubName) => gitHubName.length > 0);
+    return nonEmptyGitHubNames;
+  }
+
+  async function getNameTopicsMapFromGitHubNames(allGitHubNames: Array<String>) {
+    const nameTopicsMap = new Map<String,String[]>();
+    for (const aGitHubName of allGitHubNames) {
+    // forEach does not work with async
+    // allGitHubNames.forEach(async (aGitHubName) => {
+      const githubTopics = await getGithubTopics(aGitHubName);
+      console.info('topic/[topic].astro: githubTopics: ' + githubTopics);
+      nameTopicsMap.set(aGitHubName, githubTopics);
+    }
+    return Promise.resolve(nameTopicsMap);
+  }
+
+  function getUniqueTopicsFromNameTopicsMap(nameTopicsMap: Map<String,String[]>) {
+    const allTopics = new Array<String>();
+    nameTopicsMap.forEach((nameTopics) => {
+      nameTopics.forEach((nameTopic) => {
+        allTopics.push(nameTopic);
+      })
+    })
+    const distinctTopics = [...new Set(allTopics)];
+    return distinctTopics;
+  }
+
+  const allBlogPosts = await getCollection('blog');
+  const allGitHubNames = getAllGitHubNames(allBlogPosts);
+  const nameTopicsMap = await getNameTopicsMapFromGitHubNames(allGitHubNames);
+  const uniqueTopics = getUniqueTopicsFromNameTopicsMap(nameTopicsMap);
+
+  const topicAndItsBlogsArray = uniqueTopics.map((topic) => {
+    const filteredBlogPosts = allBlogPosts.filter((blogPost) => {
+      const gitHubTopics = nameTopicsMap.get(blogPost.data.githubName);
+      return gitHubTopics ? gitHubTopics.includes(topic): false;
+    });
+    return {
+      params: { topic },
+      props: { filteredBlogPosts: filteredBlogPosts },
+    };
+  });
+  return Promise.resolve(topicAndItsBlogsArray);
+}
+
+// type Props = Array<CollectionEntry<'blog'>>;
+
+const { topic } = Astro.params;
+const { filteredBlogPosts } = Astro.props;
+---
+<Layout
+  title={topic ? topic : "unknown"}
+  description='Blogposts with a scecific topic'
+  pubDate={new Date('August 26 2023')}
+  heroImage=''
+  githubName=''>
+  <h4>Blogposts with topic</h4>
+  <h3>{topic}</h3>
+  <ul>
+    {filteredBlogPosts.map((blogPost: typeof Layout) => 
+        <BlogPostRef url= { '/roebi-halter-in-blog/blog/' + blogPost.slug } title= { blogPost.data.title } />
+    )}
+  </ul>
+</Layout>

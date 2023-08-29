@@ -1,0 +1,81 @@
+---
+import Layout from '../../layouts/BlogPost.astro';
+import { getCollection, CollectionEntry } from 'astro:content';
+import { getGithubTopics } from '../../scripts/githubApi';
+
+function getGitHubName(blogPost: CollectionEntry<'blog'>) {
+  return blogPost.data.githubName;
+}
+
+function getAllGitHubNames(allBlogPosts: Array<CollectionEntry<'blog'>>) {
+  const allGitHubNames = allBlogPosts.map((blogPost) => getGitHubName(blogPost));
+  const nonEmptyGitHubNames = allGitHubNames.filter((gitHubName) => gitHubName.length > 0);
+  return nonEmptyGitHubNames;
+}
+
+async function getNameTopicsMapFromGitHubNames(allGitHubNames: Array<String>) {
+  const nameTopicsMap = new Map<String,String[]>();
+  for (const aGitHubName of allGitHubNames) {
+  // forEach does not work with async
+  // allGitHubNames.forEach(async (aGitHubName) => {
+    const githubTopics = await getGithubTopics(aGitHubName);
+    console.info('topic/index.astro: githubTopics: ' + githubTopics);
+    nameTopicsMap.set(aGitHubName, githubTopics);
+  }
+  return Promise.resolve(nameTopicsMap);
+}
+
+function getUniqueTopicsFromNameTopicsMap(nameTopicsMap: Map<String,String[]>) {
+  const allTopics = new Array<String>();
+  nameTopicsMap.forEach((nameTopics) => {
+    nameTopics.forEach((nameTopic) => {
+      allTopics.push(nameTopic);
+    })
+  })
+  const distinctTopics = [...new Set(allTopics)];
+  return distinctTopics;
+}
+
+const allBlogPosts = await getCollection('blog');
+const allGitHubNames = getAllGitHubNames(allBlogPosts);
+const nameTopicsMap = await getNameTopicsMapFromGitHubNames(allGitHubNames);
+const uniqueTopics = getUniqueTopicsFromNameTopicsMap(nameTopicsMap);
+---
+<Layout
+    title="Topic Index"
+    description="all unique topics"
+    pubDate={new Date('August 26 2023')}
+    heroImage=""
+    githubName=""
+>
+  <div class="topics">
+    {
+      uniqueTopics.sort().map((topic) => (
+        <p class="topic">
+          <a href={`/roebi-halter-in-blog/topic/${topic}`}>{topic}</a>
+        </p>
+      ))
+    }
+  </div>
+</Layout>
+
+<style>
+  a {
+    color: #00539f;
+  }
+
+  .topics {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 auto;
+  }
+
+  .topic {
+    margin: 0.25em;
+    border: dotted 1px #a1a1a1;
+    border-radius: 0.5em;
+    padding: 0.5em 1em;
+    font-size: 1.15em;
+    background-color: #f8fcfd;
+  }
+</style>

@@ -12,5 +12,6 @@ export async function get(context) {
 			...post.data,
 			link: `/roebi-halter-in-blog/blog/${post.slug}/`,
 		})),
+		customData: `<language>en-us</language>`
 	});
 }
