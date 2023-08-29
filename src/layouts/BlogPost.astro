@@ -11,7 +11,7 @@ type Props = CollectionEntry<'blog'>['data'];
 
 const { title, description, pubDate, updatedDate, heroImage, githubName } = Astro.props;
 const githubTopics = await getGithubTopics(githubName)
-console.info('BlogPost.astro: githubTopics: ' + githubTopics);
+// console.info('BlogPost.astro: githubTopics: ' + githubTopics);
 ---
 <html lang="en">
 	<head>
@@ -79,47 +79,7 @@ console.info('BlogPost.astro: githubTopics: ' + githubTopics);
 						<h1>{title}</h1>
 						<hr />
 					</div>
-					<slot />
-					<!-- https://www.npmjs.com/package/jsonpath -->
-					<!-- https://docs.github.com/en/rest/repos/repos#get-a-repository -->
-					<!-- https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-a-user -->
-				<!--	
-					<h3>Project examples</h3>
-					<div>Project description: <AstroGithubApiPlugin login="roebi" name="01-01-vanilla-HTML5-starter-page" jsonPath="description" /></div>
-					<div>Project homepage: <AstroGithubApiPlugin login="roebi" name="01-01-vanilla-HTML5-starter-page" jsonPath="homepage" /></div>
-					<div>Project 'license.name' wrapped in a 'h2': <AstroGithubApiPlugin login="roebi" name="01-01-vanilla-HTML5-starter-page" jsonPath="license.name" WrappedNodeName="h2"/></div>
-					<div>Project Topics 'topics[0]' wrapped in a 'div' with class 'topiccls' (Press F12 for Debug Tools): <AstroGithubApiPlugin login="roebi" name="01-01-vanilla-HTML5-starter-page" jsonPath="topics[0]" WrappedNodeName="div" wrappedNodeClass="topiccls"/></div>
-
-					<div>Project Topics 'topics[0]' wrapped in a 'div' with class 'topiccls' with navigationBaseURL (Press F12 for Debug Tools): <AstroGithubApiPlugin login="roebi" name="01-01-vanilla-HTML5-starter-page" jsonPath="topics[0]" WrappedNodeName="div" wrappedNodeClass="topiccls" navigationBaseURL="http://emample.com/"/></div>
-
-					<h3>User examples</h3>
-					<div>User name: <AstroGithubApiPlugin login="roebi" jsonPath="name" WrappedNodeName="div" wrappedNodeClass="listcls"/></div>
-				-->
-                <!-- <h3>Project List examples</h3> -->
-					<!-- known 'bug': List are handled with add all text in one, instaed embedd as a html ordered list -->
-					<!-- https://docs.astro.build/de/guides/styling/ -->
-				<!-- example of vertical ordered list -->
-				<!--
-					<style>
-					ol {
-	                  list-style: none;
-	                }
-
-                    li {
-                      display: inline-block;
-                      margin-right: 10px;
-                    }
-					</style>
-                    <div>Project Topics 'topics' ordered list wrapped in a 'div' with class 'topiccls' (Press F12 for Debug Tools): 
-						<AstroGithubApiPlugin
-						login="roebi"
-                        name="01-01-vanilla-HTML5-starter-page"
-                        jsonPath="topics"
-                        WrappedNodeName="div"
-                        wrappedNodeClass="listcls">
-                        </AstroGithubApiPlugin>
-                    </div>
-				-->
+                  <slot />
                 </div>
 			</article>
 			{ githubName &&
@@ -129,7 +89,7 @@ console.info('BlogPost.astro: githubTopics: ' + githubTopics);
 					<div><a href="/roebi-halter-in-blog/topic">Topics</a></div>
 					<div class="topics">
                     {githubTopics.sort().map((topic: String) => (
-						<p class="topic"><a href={`/topic/${topic}`}>{topic}</a></p>
+						<p class="topic"><a href={`/roebi-halter-in-blog/topic/${topic}`}>{topic}</a></p>
 					))}
 					</div>
 				    <div>GitHub Repo</div>
