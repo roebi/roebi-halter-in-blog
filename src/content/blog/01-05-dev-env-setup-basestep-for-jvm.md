@@ -1,9 +1,9 @@
 ---
-title: '01-05 dev env setup basestep for jvm'
-description: 'development environment setup basestep for jvm (Java Virtual Machine)'
-pubDate: 'August 15 2023'
-heroImage: '/blog-placeholder-3.jpg'
-githubName: '01-05-dev-env-setup-basestep-for-jvm'
+title: "01-05 dev env setup basestep for jvm"
+description: "development environment setup basestep for jvm (Java Virtual Machine)"
+pubDate: "August 15 2023"
+heroImage: "/blog-placeholder-3.jpg"
+githubName: "01-05-dev-env-setup-basestep-for-jvm"
 ---
 
 # What is this about?
