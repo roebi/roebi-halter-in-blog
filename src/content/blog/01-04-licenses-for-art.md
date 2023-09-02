@@ -1,9 +1,9 @@
 ---
-title: '01-04 licenses for art'
-description: 'permissions, conditions and limitations of license for art - give and take'
-pubDate: 'August 14 2023'
-heroImage: '/blog-placeholder-3.jpg'
-githubName: ''
+title: "01-04 licenses for art"
+description: "permissions, conditions and limitations of license for art - give and take"
+pubDate: "August 14 2023"
+heroImage: "/blog-placeholder-3.jpg"
+githubName: ""
 ---
 
 # What is this about?
@@ -49,4 +49,4 @@ see on https://creativecommons.org/share-your-work/
 
 or the beta version on https://chooser-beta.creativecommons.org/
 
-( content of https://creativecommons.org/share-your-work/ - if not otherwise noted - is licensed  under the [Creative Commons Attribution 4.0 International license](https://creativecommons.org/licenses/by/4.0/legalcode) )
+( content of https://creativecommons.org/share-your-work/ - if not otherwise noted - is licensed under the [Creative Commons Attribution 4.0 International license](https://creativecommons.org/licenses/by/4.0/legalcode) )

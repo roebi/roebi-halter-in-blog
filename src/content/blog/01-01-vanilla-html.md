@@ -1,9 +1,9 @@
 ---
-title: '01-01 vanilla HTML 5 starter page'
-description: 'a vanilla HTML 5 starter page'
-pubDate: 'August 07 2023'
-heroImage: '/blog-placeholder-3.jpg'
-githubName: '01-01-vanilla-HTML5-starter-page'
+title: "01-01 vanilla HTML 5 starter page"
+description: "a vanilla HTML 5 starter page"
+pubDate: "August 07 2023"
+heroImage: "/blog-placeholder-3.jpg"
+githubName: "01-01-vanilla-HTML5-starter-page"
 ---
 
 # What is this about?
@@ -11,6 +11,7 @@ githubName: '01-01-vanilla-HTML5-starter-page'
 This is about my vanilla HTML 5 starter page.
 
 Have you ever heard of this HTML 5 tags ?
+
 ```html
 <nav>
   <main>
@@ -18,9 +19,18 @@ Have you ever heard of this HTML 5 tags ?
       <header>
         <details>
           <summary>
-            <aside> and
-      <footer>
+            <aside>
+              and
+              <footer></footer>
+            </aside>
+          </summary>
+        </details>
+      </header>
+    </section>
+  </main>
+</nav>
 ```
+
 # if not,
 
 then take a closer look at this template and use it for your ideas and projects!

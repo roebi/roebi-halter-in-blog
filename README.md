@@ -125,6 +125,7 @@ npm install @astrojs/sitempa@latest
 npm install @astrojs/rss@latest
 npm install @astrojs/mdx@latest
 ```
+
 test
 
 ```
@@ -133,6 +134,7 @@ npm run preview
 ```
 
 add all astro default commands as shortcut commands in package.json:
+
 ```
   "scripts": {
     "astro": "astro",
@@ -253,7 +255,7 @@ This theme is based off of the lovely [Bear Blog](https://github.com/HermanMarti
 
             Stuck? Join us at https://astro.build/chat
 
-## npm run astro -- --help 
+## npm run astro -- --help
 
     $ npm run astro -- --help
 
@@ -288,9 +290,9 @@ This theme is based off of the lovely [Bear Blog](https://github.com/HermanMarti
 
 ## Deploy your Astro Site to GitHub Pages
 
- https://docs.astro.build/en/guides/deploy/github/
+https://docs.astro.build/en/guides/deploy/github/
 
- extend astro.config.mjs with
+extend astro.config.mjs with
 
      site: 'https://roebi.github.io',
      base: '/roebi-halter-in-blog'

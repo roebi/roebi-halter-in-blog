@@ -1,9 +1,9 @@
 ---
-title: '01-03 licenses for software'
-description: 'permissions, conditions and limitations of license for software - give and take'
-pubDate: 'August 14 2023'
-heroImage: '/blog-placeholder-2.jpg'
-githubName: ''
+title: "01-03 licenses for software"
+description: "permissions, conditions and limitations of license for software - give and take"
+pubDate: "August 14 2023"
+heroImage: "/blog-placeholder-2.jpg"
+githubName: ""
 ---
 
 # What is this about?
@@ -29,4 +29,4 @@ MIT: is a license often used in npm packages
 
 see on https://choosealicense.com/
 
-( content of https://choosealicense.com/ is licensed  under the [Creative Commons Attribution 3.0 Unported License](https://creativecommons.org/licenses/by/3.0/legalcode) )
+( content of https://choosealicense.com/ is licensed under the [Creative Commons Attribution 3.0 Unported License](https://creativecommons.org/licenses/by/3.0/legalcode) )

@@ -1,1 +1,1 @@
-declare module 'jsonpath'
+declare module "jsonpath";
