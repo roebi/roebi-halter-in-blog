@@ -1,5 +1,5 @@
 ---
-title: "Impressumm"
+title: "Impressum"
 description: "Who is responsible for the content"
 pubDate: "August 01 2023"
 heroImage: "/blog-placeholder-3.jpg"
