@@ -2,7 +2,7 @@
 title: "Datasafety"
 description: "Datasafety Licensing and Usage"
 pubDate: "August 01 2023"
-heroImage: "/blog-placeholder-1.jpg"
+heroImage: "/blog-placeholder-3.jpg"
 githubName: ""
 ---
 
@@ -10,7 +10,7 @@ githubName: ""
 
 This Blog is a Giver blog and not a Taker blog.
 
-The content in this blog contains starter setup of different types of small  software projects. I do not collect data. The Google Search Console collect calls of the page based on the robots.txt on the root of this wepage. If you do not like this then do not use this blog.
+The content in this blog contains starter setup of different types of small software projects. I do not collect data. The Google Search Console collect calls of the page based on the robots.txt on the root of this wepage. If you do not like this then do not use this blog.
 
 # Licensing
 
@@ -22,7 +22,7 @@ The REAL content of this blog are all the github projects, described in the post
 
 # Usage
 
-Just read the blog posts and if you find something read the README.md 
+Just read the blog posts and if you find something read the README.md
 
 I am happy if you find something interesting.
 
