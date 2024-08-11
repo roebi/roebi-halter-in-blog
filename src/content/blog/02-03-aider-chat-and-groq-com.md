@@ -18,4 +18,6 @@ i would like to get experience with **aider.chat**
 
 in this there are only the **installation steps** for aider.chat and a connection to groq.com
 
-**feel free to install it in a similar way ...**
+# feel free to install it in a similar way ...
+
+https://github.com/roebi/02-03-aider-chat-and-groq-com/blob/main/README.md
