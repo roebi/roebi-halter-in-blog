@@ -27,7 +27,7 @@
     "@astrojs/sitemap": "^3.6.0",
     "astro": "^5.14.4",
     "jsonpath": "^1.1.1",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   },
   "devDependencies": {
     "husky": "^9.1.7",
