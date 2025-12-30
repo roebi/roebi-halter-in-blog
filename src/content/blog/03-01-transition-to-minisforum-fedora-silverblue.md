@@ -17,7 +17,7 @@ For my hobby software development at home, I'm making a significant change from 
 [Product Link](https://www.digitec.ch/de/s1/product/minisforum-x1-pro-1000-gb-32-gb-amd-ryzen-ai-9-hx-370-pc-60992074)
 
 Running **Linux Fedora Silverblue**  
-[Fedora Atomic Desktops](https://fedoraproject.org/atomic-desktops/silverblue/)
+[Fedora Silverblue Atomic Desktop](https://fedoraproject.org/atomic-desktops/silverblue/)
 
 ## Hardware Requirements
 
