@@ -45,7 +45,7 @@ The operating system must provide:
 Fedora Silverblue is an immutable desktop operating system that brings several advantages to development workflows.
 
 ### Toolbx Integration
-Silverblue uses Toolbx on top of Podman, which shares the user's home filesystem. This means you can install development tools and dependencies inside isolated containers while maintaining seamless access to your files and projects. Each toolbox container acts as a familiar mutable environment, while your base system remains unchanged.
+Silverblue uses [Toolbx](https://containertoolbx.org/) on top of [Podman](https://podman.io/), which shares the user's home filesystem. This means you can install development tools and dependencies inside isolated containers while maintaining seamless access to your files and projects. Each toolbox container acts as a familiar mutable environment, while your base system remains unchanged.
 
 ### OS and Development Tool Isolation
 The immutable nature of Silverblue means that OS updates are atomic and can be rolled back if needed. Your development tools live in Toolbx containers, completely separated from the base system. This isolation ensures that system updates won't break your development environment, and changes to your development tools won't affect system stability.
