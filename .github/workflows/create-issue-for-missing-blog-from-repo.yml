@@ -1,0 +1,156 @@
+name: Create Issue for Missing Blog from Repo
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-missing-blog-issues:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout blog repo
+        uses: actions/checkout@v4
+
+      - name: Create issues for repos missing blog entries
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const EXCLUDED_REPOS = [
+              'roebi.github.io',
+              'roebi-halter-in-blog',
+              'codespaces-models'
+            ];
+
+            // ── 1. Get all roebi repos (paginated) ──────────────────────
+            console.log('Fetching all roebi repos...');
+            const repos = await github.paginate(github.rest.repos.listForUser, {
+              username: 'roebi',
+              type: 'owner',
+              per_page: 100
+            });
+
+            const filteredRepos = repos.filter(repo =>
+              !repo.fork &&
+              !EXCLUDED_REPOS.includes(repo.name)
+            );
+            console.log(`Found ${filteredRepos.length} repos to check (after exclusions)`);
+
+            // ── 2. Get all blog entry filenames ──────────────────────────
+            console.log('Reading blog entries...');
+            const { data: blogFiles } = await github.rest.repos.getContent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: 'src/content/blog'
+            });
+
+            // New rule: collect <repo-name>.md filenames
+            const blogFileNames = blogFiles
+              .filter(f => f.name.endsWith('.md'))
+              .map(f => f.name.replace(/\.md$/, ''));
+
+            // Old rule: collect full content of each .md for link scanning
+            console.log('Reading blog content for old-rule link scanning...');
+            const blogContents = [];
+            for (const file of blogFiles.filter(f => f.name.endsWith('.md'))) {
+              const { data: fileData } = await github.rest.repos.getContent({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: file.path
+              });
+              const content = Buffer.from(fileData.content, 'base64').toString('utf8');
+              blogContents.push(content);
+            }
+
+            // ── 3. Get all existing wontfix issues ───────────────────────
+            console.log('Fetching existing wontfix issues...');
+            const wontfixIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'wontfix',
+              state: 'all',
+              per_page: 100
+            });
+            const wontfixTitles = wontfixIssues.map(i => i.title.toLowerCase());
+
+            // ── 4. Get all existing open issues to avoid duplicates ──────
+            console.log('Fetching existing open issues...');
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+            const openIssueTitles = openIssues.map(i => i.title.toLowerCase());
+
+            // ── 5. Check each repo and create issue if needed ────────────
+            let created = 0;
+            let skipped = 0;
+
+            for (const repo of filteredRepos) {
+              const repoName = repo.name;
+
+              // New rule: exact filename match
+              const hasNewRuleMatch = blogFileNames.includes(repoName);
+
+              // Old rule: any blog content contains link to this repo
+              const repoUrl = `https://github.com/roebi/${repoName}`;
+              const hasOldRuleMatch = blogContents.some(c => c.includes(repoUrl));
+
+              if (hasNewRuleMatch || hasOldRuleMatch) {
+                console.log(`SKIP (has blog): ${repoName}`);
+                skipped++;
+                continue;
+              }
+
+              // Check wontfix
+              const hasWontfix = wontfixTitles.some(t => t.includes(repoName.toLowerCase()));
+              if (hasWontfix) {
+                console.log(`SKIP (wontfix): ${repoName}`);
+                skipped++;
+                continue;
+              }
+
+              // Check if open issue already exists
+              const issueTitle = `create blog entry for ${repoName}`;
+              const hasOpenIssue = openIssueTitles.some(t => t.includes(repoName.toLowerCase()));
+              if (hasOpenIssue) {
+                console.log(`SKIP (open issue exists): ${repoName}`);
+                skipped++;
+                continue;
+              }
+
+              // Create the issue
+              console.log(`CREATE issue: ${issueTitle}`);
+              const body = [
+                `## Blog entry missing for: [${repoName}](${repoUrl})`,
+                ``,
+                `| Resource | Link |`,
+                `|----------|------|`,
+                `| Repository | ${repoUrl} |`,
+                `| README | ${repoUrl}/blob/main/README.md |`,
+                `| LICENSE | ${repoUrl}/blob/main/LICENSE |`,
+                `| Workflows | ${repoUrl}/tree/main/.github/workflows |`,
+                ``,
+                `## Decision`,
+                ``,
+                `- Add label \`newblogpost\` + remove \`triage\` → blog entry will be created automatically`,
+                `- Add label \`wontfix\` + remove \`triage\` → never create issue for this repo again`,
+              ].join('\n');
+
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: issueTitle,
+                body: body
+              });
+
+              created++;
+
+              // Small delay to avoid hitting API rate limits
+              await new Promise(r => setTimeout(r, 500));
+            }
+
+            console.log(`Done. Created: ${created} issues, Skipped: ${skipped} repos`);
