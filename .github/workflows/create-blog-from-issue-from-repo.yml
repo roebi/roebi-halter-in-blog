@@ -1,0 +1,181 @@
+name: Create Blog from Issue from Repo
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  create-blog:
+    runs-on: ubuntu-latest
+
+    # Only run for newblogpost label on matching issue titles
+    if: |
+      github.event.label.name == 'newblogpost' &&
+      startsWith(github.event.issue.title, 'create blog entry for ') &&
+      github.event.issue.user.login == 'github-actions[bot]'
+
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: read
+
+    steps:
+      - name: Checkout blog repo
+        uses: actions/checkout@v4
+
+      - name: Extract repo name and issue number
+        id: vars
+        run: |
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          REPO_NAME="${ISSUE_TITLE#create blog entry for }"
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          BRANCH_NAME="feature/${ISSUE_NUMBER}-${REPO_NAME}-create-blog"
+          BLOG_FILE="src/content/blog/${REPO_NAME}.md"
+          TODAY=$(date +'%B %d %Y')
+          echo "repo_name=${REPO_NAME}" >> $GITHUB_OUTPUT
+          echo "issue_number=${ISSUE_NUMBER}" >> $GITHUB_OUTPUT
+          echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          echo "blog_file=${BLOG_FILE}" >> $GITHUB_OUTPUT
+          echo "today=${TODAY}" >> $GITHUB_OUTPUT
+
+      - name: Fetch README.md of target repo
+        id: readme
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          README_URL="https://raw.githubusercontent.com/roebi/${{ steps.vars.outputs.repo_name }}/main/README.md"
+          if curl -sf -H "Authorization: token $GH_TOKEN" "$README_URL" -o /tmp/target-README.md; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "README.md fetched successfully"
+            head -5 /tmp/target-README.md
+          else
+            # try master branch
+            README_URL_MASTER="https://raw.githubusercontent.com/roebi/${{ steps.vars.outputs.repo_name }}/master/README.md"
+            if curl -sf -H "Authorization: token $GH_TOKEN" "$README_URL_MASTER" -o /tmp/target-README.md; then
+              echo "found=true" >> $GITHUB_OUTPUT
+              echo "README.md fetched from master branch"
+            else
+              echo "found=false" >> $GITHUB_OUTPUT
+              echo "# No README found" > /tmp/target-README.md
+            fi
+          fi
+
+      - name: Detect license type
+        id: license
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LICENSE_URL="https://raw.githubusercontent.com/roebi/${{ steps.vars.outputs.repo_name }}/main/LICENSE"
+          LICENSE_CONTENT=$(curl -sf -H "Authorization: token $GH_TOKEN" "$LICENSE_URL" | head -20 || echo "")
+          if echo "$LICENSE_CONTENT" | grep -qi "MIT"; then
+            echo "type=MIT License" >> $GITHUB_OUTPUT
+          elif echo "$LICENSE_CONTENT" | grep -qi "Apache"; then
+            echo "type=Apache 2.0 License" >> $GITHUB_OUTPUT
+          elif echo "$LICENSE_CONTENT" | grep -qi "GNU GENERAL PUBLIC LICENSE.*Version 3"; then
+            echo "type=GPL-3.0 License" >> $GITHUB_OUTPUT
+          elif echo "$LICENSE_CONTENT" | grep -qi "GNU GENERAL PUBLIC LICENSE.*Version 2"; then
+            echo "type=GPL-2.0 License" >> $GITHUB_OUTPUT
+          elif echo "$LICENSE_CONTENT" | grep -qi "GNU LESSER"; then
+            echo "type=LGPL License" >> $GITHUB_OUTPUT
+          elif echo "$LICENSE_CONTENT" | grep -qi "Mozilla Public License"; then
+            echo "type=MPL-2.0 License" >> $GITHUB_OUTPUT
+          elif echo "$LICENSE_CONTENT" | grep -qi "BSD"; then
+            echo "type=BSD License" >> $GITHUB_OUTPUT
+          elif echo "$LICENSE_CONTENT" | grep -qi "ISC"; then
+            echo "type=ISC License" >> $GITHUB_OUTPUT
+          else
+            echo "type=LICENSE" >> $GITHUB_OUTPUT
+          fi
+          echo "Detected license: $(cat $GITHUB_OUTPUT | grep type | cut -d= -f2)"
+
+      - name: Create feature branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b ${{ steps.vars.outputs.branch_name }}
+
+      - name: Create blog entry skeleton
+        run: |
+          REPO_NAME="${{ steps.vars.outputs.repo_name }}"
+          TODAY="${{ steps.vars.outputs.today }}"
+          LICENSE_TYPE="${{ steps.license.outputs.type }}"
+          BLOG_FILE="${{ steps.vars.outputs.blog_file }}"
+
+          cat > "$BLOG_FILE" << BLOGEOF
+          ---
+          title: "${REPO_NAME}"
+          description: ""
+          pubDate: "${TODAY}"
+          heroImage: "/blog-placeholder-2.jpg"
+          githubName: "${REPO_NAME}"
+          ---
+
+          ## What is this about?
+
+          ## Links
+
+          - [README](https://github.com/roebi/${REPO_NAME}/blob/main/README.md)
+          - [${LICENSE_TYPE}](https://github.com/roebi/${REPO_NAME}/blob/main/LICENSE)
+          BLOGEOF
+          echo "Blog skeleton created at $BLOG_FILE"
+          cat "$BLOG_FILE"
+
+      - name: Setup Python for aider
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install aider-chat and aider-skills
+        run: |
+          pip install aider-chat aider-skills --break-system-packages
+
+      - name: Run aider to fill description and What is this about section
+        env:
+          OPENAI_API_BASE: https://models.inference.ai.azure.com
+          OPENAI_API_KEY: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO_NAME="${{ steps.vars.outputs.repo_name }}"
+          BLOG_FILE="${{ steps.vars.outputs.blog_file }}"
+
+          SKILL_CONTEXT=$(aider-skills tmpfile skills/)
+
+          MSG="You are filling a blog entry file for the GitHub repository '${REPO_NAME}'.
+          The file already has a skeleton with empty description and empty What is this about section.
+          Use the create-blog-entry-what-is-this-about skill to:
+          1. Fill the description frontmatter field with exactly 1 sentence (max 160 characters) summarising what the repo does.
+          2. Fill the ## What is this about? section with 3 to 6 sentences in plain prose (no lists, no code blocks).
+             First sentence: what the repo is and what it does.
+             Middle sentences: key features, use cases, or motivation.
+             Last sentence: who benefits or how to get started.
+          Base your writing on the content of the provided README.md file.
+          Do NOT change any other part of the file - only fill description and the What is this about section."
+
+          aider \
+            --model openai/gpt-4o \
+            --weak-model openai/gpt-4o \
+            --read "$SKILL_CONTEXT" \
+            --read /tmp/target-README.md \
+            "$BLOG_FILE" \
+            --message "$MSG" \
+            --yes \
+            --no-auto-commits
+
+      - name: Commit and push feature branch
+        run: |
+          git add ${{ steps.vars.outputs.blog_file }}
+          git commit -m "blog: create blog entry for ${{ steps.vars.outputs.repo_name }}"
+          git push origin ${{ steps.vars.outputs.branch_name }}
+
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --title "create blog entry for ${{ steps.vars.outputs.repo_name }}" \
+            --body "Closes #${{ steps.vars.outputs.issue_number }}
+
+          Blog entry generated for [${{ steps.vars.outputs.repo_name }}](https://github.com/roebi/${{ steps.vars.outputs.repo_name }}).
+
+          Please review the generated content before merging." \
+            --base master \
+            --head ${{ steps.vars.outputs.branch_name }}

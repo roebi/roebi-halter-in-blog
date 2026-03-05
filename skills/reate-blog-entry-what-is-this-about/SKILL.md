@@ -1,0 +1,117 @@
+---
+name: create-blog-entry-what-is-this-about
+description: >
+  Creates the "What is this about?" section and frontmatter description field
+  for a blog entry about a GitHub repository. Use this skill when an agent
+  needs to generate a blog post introduction from a repository README and
+  description. Activate for phrases like: "create blog entry", "write blog
+  post for repo", "generate what is this about section", "blog from readme",
+  or "summarize repo for blog".
+compatibility: Requires access to the target GitHub repo README.md content.
+metadata:
+  author: roebi
+  spec: https://agentskills.io/specification
+---
+
+# Create Blog Entry: What Is This About?
+
+Generates the `description` frontmatter field and the `## What is this about?`
+body section for a blog entry, based on a GitHub repository's README and
+description.
+
+## When to use this skill
+
+Activate when an agent must fill the `description` and `## What is this about?`
+parts of a blog entry file that already has its frontmatter skeleton in place.
+
+Trigger contexts:
+- Blog entry file exists with empty `description: ""` frontmatter
+- Blog entry file has `## What is this about?` placeholder section
+- Input available: README.md content and/or repo description string
+
+## Inputs expected
+
+| Input | Source | Required |
+|-------|--------|----------|
+| README.md content | read from target repo | yes |
+| Repo description | GitHub API or repo metadata | optional |
+| Blog entry file | already created with skeleton | yes |
+
+## Output
+
+Two parts written into the blog entry file:
+
+### 1. `description` frontmatter field
+- Exactly **1 sentence**, max 160 characters
+- Summarises what the repo does in plain language
+- No jargon, no marketing language
+- Written in present tense: "Provides...", "Generates...", "A tool that..."
+
+### 2. `## What is this about?` section body
+- **3 to 6 sentences**
+- First sentence: what the repo is and what it does
+- Middle sentences: key features, use cases, or motivation
+- Last sentence: who benefits from it or how to get started
+- Plain language, no bullet points, no headers inside the section
+- Do NOT copy-paste from README — rewrite in your own words
+- Do NOT include code blocks or commands
+
+## Step-by-step instructions
+
+### 1. Read available inputs
+
+```bash
+# README is provided as context — read it fully
+# Focus on: title, first paragraph, features list, use cases
+```
+
+### 2. Write the description field (1 sentence)
+
+Rules:
+- Start with a verb or noun phrase: "A CLI tool...", "Generates...", "Provides..."
+- Max 160 characters
+- No quotes around it in the frontmatter (the YAML already has quotes)
+
+Example:
+```
+description: "A minimal GitHub portfolio powered by gitprofile, deployed via GitHub Pages with a config-only approach."
+```
+
+### 3. Write the What is this about? section (3-6 sentences)
+
+Rules:
+- Plain prose, no lists, no sub-headers
+- Start broad (what it is), then narrow (how it works), then close (benefit)
+- If README is sparse, use repo name and description to infer purpose
+- If repo is a collection (awesome list, skills repo), say so clearly
+
+Example output:
+```markdown
+## What is this about?
+
+This repository provides a minimal personal portfolio website powered by the
+gitprofile project. Instead of forking the full source, it uses a config-only
+approach where a single TypeScript file holds all personal settings. A GitHub
+Action fetches the gitprofile source, injects the configuration, builds the
+site, and deploys it to GitHub Pages automatically on every push. This makes
+updating the portfolio as simple as editing one file.
+```
+
+### 4. Write both into the blog entry file
+
+The agent edits the existing blog entry file:
+- Replace `description: ""` with `description: "<generated 1 sentence>"`
+- Replace the empty `## What is this about?` section body with the 3-6 sentences
+
+Do NOT change any other part of the file — frontmatter title, pubDate,
+heroImage, githubName, or the Links section must remain untouched.
+
+## Quality checklist
+
+Before finishing, verify:
+- [ ] description is exactly 1 sentence, max 160 chars
+- [ ] What is this about? has 3-6 sentences, no lists, no code blocks
+- [ ] No copy-paste from README (rewritten in own words)
+- [ ] No marketing language ("revolutionary", "powerful", "amazing")
+- [ ] Present tense throughout
+- [ ] Only description and What is this about? section were modified
