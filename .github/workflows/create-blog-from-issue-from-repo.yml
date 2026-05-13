@@ -25,10 +25,13 @@ jobs:
 
       - name: Extract repo name and issue number
         id: vars
+        env:
+          ISSUE_TITLE_INPUT: ${{ github.event.issue.title }}
+          ISSUE_NUMBER_INPUT: ${{ github.event.issue.number }}
         run: |
-          ISSUE_TITLE="${{ github.event.issue.title }}"
+          ISSUE_TITLE="$ISSUE_TITLE_INPUT"
           REPO_NAME="${ISSUE_TITLE#create blog entry for }"
-          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          ISSUE_NUMBER="$ISSUE_NUMBER_INPUT"
           BRANCH_NAME="feature/${ISSUE_NUMBER}-${REPO_NAME}-create-blog"
           BLOG_FILE="src/content/blog/${REPO_NAME}.md"
           TODAY=$(date +'%B %d %Y')
