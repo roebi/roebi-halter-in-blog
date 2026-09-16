@@ -10,7 +10,7 @@ githubName: ""
 
 This Blog is a Giver blog and not a Taker blog.
 
-The content in this blog contains starter setup of different types of small software projects. I do not collect data. The Google Search Console collect calls of the page based on the robots.txt on the root of this wepage. If you do not like this then do not use this blog.
+The content in this blog contains starter setup of different types of small software projects. I do not collect data. The Google Search Console collect calls of the page based on the robots.txt on the github pages server.
 
 # Licensing
 
@@ -18,7 +18,7 @@ The Webpage of this Blog is copyright 2023 by roebi, means do not direct copy fr
 
 The Github project of this blog has a license which gives you the possibility to help to enlarge this blog. Feel free to add some issues and / or fork / pull requests.
 
-The REAL content of this blog are all the github projects, described in the posts of the blog. All this github repos have their own license. Which is often a let's say easy to reuse or copy of such a repo. Some of them are marked as Github Template.
+The REAL content of this blog are all the github projects, described in the posts of the blog. All this github repos have their own license. Which is often a let's say easy to reuse or copy of such starter setups.
 
 # Usage
 
