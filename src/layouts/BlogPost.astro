@@ -79,25 +79,24 @@ const githubTopics = await getGithubTopics(githubName)
 						<h1>{title}</h1>
 						<hr />
 					</div>
-                  <slot />
-                </div>
+          <slot />
+        </div>
 			</article>
 			{ githubName &&
 			<article>
 				<div class="prose">
-				    <hr />
+				  <hr />
 					<div><a href="/roebi-halter-in-blog/topic">Topics</a></div>
 					<div class="topics">
-                    {githubTopics.sort().map((topic: String) => (
+            { githubTopics.sort().map((topic: String) => (
 						<p class="topic"><a href={`/roebi-halter-in-blog/topic/${topic}`}>{topic}</a></p>
-					))}
+					)) }
 					</div>
 				    <div>GitHub Repo</div>
-					    <div class="topics">
-				            <p class="topic"><a href={`${GITHUB_OWNER_HTML_URL}${githubName}`} target="_blank">{githubName}</a></p>
+					  <div class="topics">
+				      <p class="topic"><a href={`${GITHUB_OWNER_HTML_URL}${githubName}`} target="_blank">{githubName}</a></p>
 						</div>
-				    </div>
-			    </div>
+			  </div>
 			</article>
 		    }
 		</main>
