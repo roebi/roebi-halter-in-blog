@@ -72,7 +72,7 @@ const { filteredBlogPosts } = Astro.props;
   <h3>{topic}</h3>
   <ul>
     {filteredBlogPosts.map((blogPost: typeof Layout) => 
-        <BlogPostRef url= { '/roebi-halter-in-blog/blog/' + blogPost.slug } title= { blogPost.data.title } />
+        <BlogPostRef url={'/roebi-halter-in-blog/blog/' + blogPost.id.replace(/\\.(md|mdx)$/, '') + '/'} title={blogPost.data.title} />
     )}
   </ul>
 </Layout>
