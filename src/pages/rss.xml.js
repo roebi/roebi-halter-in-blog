@@ -10,7 +10,7 @@ export async function get(context) {
     site: context.site,
     items: posts.map((post) => ({
       ...post.data,
-      link: `/roebi-halter-in-blog/blog/${post.slug}/`,
+      link: `/roebi-halter-in-blog/blog/${post.id.replace(/\\.(md|mdx)$/, '')}/`,
     })),
     customData: `<language>en-us</language>`,
   });

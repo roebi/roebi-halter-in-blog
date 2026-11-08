@@ -8,7 +8,7 @@ export const GET: APIRoute = async () => {
             .map(
                 (blogPost) =>
                     `# ${blogPost.data.title}\n\n
-                https://roebi.github.io/roebi-halter-in-blog/blog/${blogPost.slug}.md \n
+                https://roebi.github.io/roebi-halter-in-blog/blog/${blogPost.id.replace(/\\.(md|mdx)$/, '')}.md \n
                 ${blogPost.data.description} \n
                   ${blogPost.body}
                 }`
