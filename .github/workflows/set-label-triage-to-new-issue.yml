@@ -4,6 +4,12 @@ on:
     types:
       - reopened
       - opened
+
+# GitHub REST API version for all API calls. Without it requests use
+# 2022-11-28, which is deprecated and removed on 2028-03-10.
+env:
+  GITHUB_API_VERSION: "2026-03-10"
+
 jobs:
   label_issues:
     runs-on: ubuntu-latest
@@ -13,7 +19,12 @@ jobs:
       - uses: actions/github-script@v8
         with:
           script: |
-            github.rest.issues.addLabels({
+            // use the current REST API version for every request (incl. paginate)
+            github.hook.before('request', (options) => {
+              options.headers['x-github-api-version'] = process.env.GITHUB_API_VERSION;
+            });
+
+            await github.rest.issues.addLabels({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,

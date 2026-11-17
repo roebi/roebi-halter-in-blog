@@ -57,14 +57,16 @@ jobs:
         run: |
           API="https://api.github.com/repos/roebi/${REPO_NAME}"
           AUTH="Authorization: Bearer $GH_TOKEN"
+          # current REST API version (default 2022-11-28 is deprecated)
+          VER="X-GitHub-Api-Version: 2026-03-10"
 
           # Default branch is only reported (links use HEAD, see blog skeleton)
-          DEFAULT_BRANCH=$(curl -sf -H "$AUTH" "$API" | jq -r '.default_branch // "unknown"')
+          DEFAULT_BRANCH=$(curl -sf -H "$AUTH" -H "$VER" "$API" | jq -r '.default_branch // "unknown"')
           echo "default_branch=${DEFAULT_BRANCH}" >> "$GITHUB_OUTPUT"
           echo "Default branch: ${DEFAULT_BRANCH}"
 
           # README via API: works for any default branch and any README file name
-          if curl -sf -H "$AUTH" -H "Accept: application/vnd.github.raw+json" "$API/readme" -o /tmp/target-README.md; then
+          if curl -sf -H "$AUTH" -H "$VER" -H "Accept: application/vnd.github.raw+json" "$API/readme" -o /tmp/target-README.md; then
             echo "README.md fetched"
             head -5 /tmp/target-README.md
           else
@@ -73,7 +75,7 @@ jobs:
           fi
 
           # License via API: GitHub detects the license type (SPDX) for us
-          if LICENSE_JSON=$(curl -sf -H "$AUTH" "$API/license"); then
+          if LICENSE_JSON=$(curl -sf -H "$AUTH" -H "$VER" "$API/license"); then
             LICENSE_NAME=$(echo "$LICENSE_JSON" | jq -r '.license.name // "LICENSE"')
             LICENSE_PATH=$(echo "$LICENSE_JSON" | jq -r '.path // "LICENSE"')
             [ "$LICENSE_NAME" = "Other" ] && LICENSE_NAME="LICENSE"
