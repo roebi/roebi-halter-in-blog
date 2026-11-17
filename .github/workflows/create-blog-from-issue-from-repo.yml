@@ -164,17 +164,34 @@ jobs:
           Keep the HTML comment line in the What is this about section and write the sentences below it.
           Do NOT change any other part of the file - only fill description and the What is this about section."
 
+          # GitHub Models free tier: ~8k input tokens per request for gpt-4o.
+          # Keep the prompt small: cut long READMEs, no repo map.
+          head -c 6000 /tmp/target-README.md > /tmp/target-README-short.md
+
+          # --no-stream: streamed answers from GitHub Models came back empty
+          # --edit-format whole: the file is tiny, whole is the most robust format
+          set -o pipefail
           aider \
             --model openai/openai/gpt-4o \
             --weak-model openai/openai/gpt-4o \
+            --no-stream \
+            --edit-format whole \
+            --map-tokens 0 \
+            --no-gitignore \
             --no-show-model-warnings \
             --no-check-update \
             --read "$SKILL_CONTEXT" \
-            --read /tmp/target-README.md \
+            --read /tmp/target-README-short.md \
             "$BLOG_FILE" \
             --message "$MSG" \
             --yes \
-            --no-auto-commits
+            --no-auto-commits 2>&1 | tee /tmp/aider-output.txt
+
+          # aider exits 0 on LLM errors, so look for them in its output
+          if grep -qE "Empty response received|litellm\.[A-Za-z]*Error|tokens_limit_reached|RateLimitError|APIError|BadRequestError|AuthenticationError" /tmp/aider-output.txt; then
+            echo "::error::aider reported an LLM problem, see output above"
+            exit 1
+          fi
 
       - name: Validate generated blog entry
         run: |
