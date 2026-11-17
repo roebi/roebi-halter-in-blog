@@ -166,15 +166,21 @@ jobs:
              First sentence: what the repo is and what it does.
              Middle sentences: key features, use cases, or motivation.
              Last sentence: who benefits or how to get started.
-          Base your writing on the content of the provided README.md file.
+          Base your writing ONLY on the read-only file target-repo-readme.md, which is the README of '${REPO_NAME}'.
           Keep the HTML comment line in the What is this about section and write the sentences below it.
           Do NOT change any other part of the file - only fill description and the What is this about section."
 
           # Groq free tier limits tokens per minute: keep the prompt small,
           # cut long READMEs, no repo map.
-          head -c 6000 /tmp/target-README.md > /tmp/target-README-short.md
+          # Not named README.md: aider would match that name to a repo file.
+          head -c 6000 /tmp/target-README.md > /tmp/target-repo-readme.md
 
           # --edit-format whole: the file is tiny, whole is the most robust format
+          # --no-git: aider only knows the files given here. With git, a file
+          #   name in the prompt or answer (README.md, package.json, ...) made
+          #   aider add that file of THIS repo (--yes) and send another request:
+          #   wrong README used, then 8K tokens/min rate limit. The workflow
+          #   commits itself, so aider needs no git.
           set -o pipefail
           aider \
             --model "$AIDER_MODEL" \
@@ -182,12 +188,12 @@ jobs:
             --no-stream \
             --edit-format whole \
             --map-tokens 0 \
-            --no-gitignore \
+            --no-git \
             --no-show-model-warnings \
             --no-check-update \
             --read "$SKILL_CONTEXT" \
             --read "$SKILL_FILE" \
-            --read /tmp/target-README-short.md \
+            --read /tmp/target-repo-readme.md \
             "$BLOG_FILE" \
             --message "$MSG" \
             --yes \
