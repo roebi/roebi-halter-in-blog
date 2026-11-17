@@ -23,7 +23,7 @@ jobs:
       # LLM for aider via litellm. GitHub Models was retired on 2026-07-30.
       # Override without code change: repo variable AIDER_MODEL
       # (Settings -> Secrets and variables -> Actions -> Variables).
-      AIDER_MODEL: ${{ vars.AIDER_MODEL || 'groq/llama-3.3-70b-versatile' }}
+      AIDER_MODEL: ${{ vars.AIDER_MODEL || 'groq/openai/gpt-oss-120b' }}
 
     steps:
       - name: Checkout blog repo
@@ -193,13 +193,20 @@ jobs:
             --yes \
             --no-auto-commits 2>&1 | tee /tmp/aider-output.txt
 
-          # aider exits 0 on LLM errors, so look for them in its output
-          if grep -qE "Empty response received|litellm\.[A-Za-z]*Error|tokens_limit_reached|RateLimitError|APIError|BadRequestError|AuthenticationError" /tmp/aider-output.txt; then
-            echo "::error::aider reported an LLM problem, see output above"
-            echo "::group::litellm debug call (exact request aider sends)"
-            LITELLM_DEBUG=1 python3 .github/scripts/litellm-debug.py "$AIDER_MODEL" || true
-            echo "::endgroup::"
-            exit 1
+          # aider exits 0 on LLM errors. It also retries (e.g. on a 429 rate
+          # limit, 8K tokens/min on the Groq free plan) and a retry may still
+          # succeed, so an error line only fails the step if the entry is unfilled.
+          ERRORS="Empty response received|litellm\.[A-Za-z]*Error|RateLimitError|APIError|BadRequestError|AuthenticationError|NotFoundError"
+          if grep -qE "$ERRORS" /tmp/aider-output.txt; then
+            if python3 .github/scripts/validate-blog-entry.py "$BLOG_FILE" >/dev/null; then
+              echo "::warning::aider reported an LLM problem but a retry filled the entry"
+            else
+              echo "::error::aider reported an LLM problem, see output above"
+              echo "::group::litellm debug call (exact request aider sends)"
+              LITELLM_DEBUG=1 python3 .github/scripts/litellm-debug.py "$AIDER_MODEL" || true
+              echo "::endgroup::"
+              exit 1
+            fi
           fi
 
       - name: Validate generated blog entry
