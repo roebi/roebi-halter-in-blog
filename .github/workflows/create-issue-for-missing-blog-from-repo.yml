@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Checkout blog repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Create issues for repos missing blog entries
         uses: actions/github-script@v8
