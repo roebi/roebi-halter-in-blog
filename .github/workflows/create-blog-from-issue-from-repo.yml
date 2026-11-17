@@ -18,7 +18,12 @@ jobs:
       contents: write
       pull-requests: write
       issues: read
-      models: read   # GitHub Models (LLM for aider) via GITHUB_TOKEN
+
+    env:
+      # LLM for aider via litellm. GitHub Models was retired on 2026-07-30.
+      # Override without code change: repo variable AIDER_MODEL
+      # (Settings -> Secrets and variables -> Actions -> Variables).
+      AIDER_MODEL: ${{ vars.AIDER_MODEL || 'groq/llama-3.3-70b-versatile' }}
 
     steps:
       - name: Checkout blog repo
@@ -128,32 +133,21 @@ jobs:
           aider-skills validate skills/create-blog-entry-what-is-this-about
           aider-skills list skills/
 
-      - name: Check GitHub Models is reachable
+      - name: Check LLM provider is reachable
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
-          # aider exits 0 even if every LLM call fails, so check access first.
-          # HTTP 200 alone is not enough: the body must be a real chat answer.
-          HTTP_CODE=$(curl -s -o /tmp/models-check.json -w "%{http_code}" \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Content-Type: application/json" \
-            -H "Accept: application/json" \
-            -d '{"model":"openai/gpt-4o","messages":[{"role":"user","content":"Say OK"}],"max_tokens":5}' \
-            https://models.github.ai/inference/chat/completions)
-          echo "HTTP $HTTP_CODE, body:"
-          cat /tmp/models-check.json; echo
-          if [ "$HTTP_CODE" != "200" ] || ! jq -e '.choices[0].message.content' /tmp/models-check.json >/dev/null 2>&1; then
-            echo "::error::GitHub Models did not return a chat answer (HTTP $HTTP_CODE)"
+          # aider exits 0 even if every LLM call fails, so check access first
+          # with one tiny request through litellm (same library aider uses).
+          if [ -z "$GROQ_API_KEY" ]; then
+            echo "::error::Repository secret GROQ_API_KEY is missing (Settings -> Secrets and variables -> Actions)"
             exit 1
           fi
-          echo "GitHub Models reachable, model: $(jq -r '.model' /tmp/models-check.json)"
+          python3 .github/scripts/litellm-debug.py "$AIDER_MODEL"
 
       - name: Run aider to fill description and What is this about section
         env:
-          # GitHub Models (OpenAI compatible). The old endpoint
-          # models.inference.ai.azure.com is deprecated.
-          OPENAI_API_BASE: https://models.github.ai/inference
-          OPENAI_API_KEY: ${{ secrets.GITHUB_TOKEN }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
           REPO_NAME="${{ steps.vars.outputs.repo_name }}"
           BLOG_FILE="${{ steps.vars.outputs.blog_file }}"
@@ -176,23 +170,21 @@ jobs:
           Keep the HTML comment line in the What is this about section and write the sentences below it.
           Do NOT change any other part of the file - only fill description and the What is this about section."
 
-          # GitHub Models free tier: ~8k input tokens per request for gpt-4o.
-          # Keep the prompt small: cut long READMEs, no repo map.
+          # Groq free tier limits tokens per minute: keep the prompt small,
+          # cut long READMEs, no repo map.
           head -c 6000 /tmp/target-README.md > /tmp/target-README-short.md
 
-          # --no-stream: streamed answers from GitHub Models came back empty
           # --edit-format whole: the file is tiny, whole is the most robust format
           set -o pipefail
           aider \
-            --model openai/openai/gpt-4o \
-            --weak-model openai/openai/gpt-4o \
+            --model "$AIDER_MODEL" \
+            --weak-model "$AIDER_MODEL" \
             --no-stream \
             --edit-format whole \
             --map-tokens 0 \
             --no-gitignore \
             --no-show-model-warnings \
             --no-check-update \
-            --openai-api-base "$OPENAI_API_BASE" \
             --read "$SKILL_CONTEXT" \
             --read "$SKILL_FILE" \
             --read /tmp/target-README-short.md \
@@ -205,7 +197,7 @@ jobs:
           if grep -qE "Empty response received|litellm\.[A-Za-z]*Error|tokens_limit_reached|RateLimitError|APIError|BadRequestError|AuthenticationError" /tmp/aider-output.txt; then
             echo "::error::aider reported an LLM problem, see output above"
             echo "::group::litellm debug call (exact request aider sends)"
-            python3 .github/scripts/litellm-debug.py openai/openai/gpt-4o || true
+            LITELLM_DEBUG=1 python3 .github/scripts/litellm-debug.py "$AIDER_MODEL" || true
             echo "::endgroup::"
             exit 1
           fi
