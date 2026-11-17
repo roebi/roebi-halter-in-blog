@@ -7,6 +7,8 @@ on:
 jobs:
   create-blog:
     runs-on: ubuntu-latest
+    # hard cap: LLM waits and retries can never make the run hang
+    timeout-minutes: 15
 
     # Only run for newblogpost label on matching issue titles
     if: |
@@ -143,7 +145,9 @@ jobs:
             echo "::error::Repository secret GROQ_API_KEY is missing (Settings -> Secrets and variables -> Actions)"
             exit 1
           fi
-          python3 .github/scripts/litellm-debug.py "$AIDER_MODEL"
+          # --need-tokens: if the tokens-per-minute window (Groq free plan: 8K)
+          # has not enough left for the aider call (~6-7K), wait for its reset
+          python3 .github/scripts/litellm-debug.py "$AIDER_MODEL" --need-tokens 7000
 
       - name: Run aider to fill description and What is this about section
         env:
@@ -181,39 +185,52 @@ jobs:
           #   aider add that file of THIS repo (--yes) and send another request:
           #   wrong README used, then 8K tokens/min rate limit. The workflow
           #   commits itself, so aider needs no git.
-          set -o pipefail
-          aider \
-            --model "$AIDER_MODEL" \
-            --weak-model "$AIDER_MODEL" \
-            --no-stream \
-            --edit-format whole \
-            --map-tokens 0 \
-            --no-git \
-            --no-show-model-warnings \
-            --no-check-update \
-            --read "$SKILL_CONTEXT" \
-            --read "$SKILL_FILE" \
-            --read /tmp/target-repo-readme.md \
-            "$BLOG_FILE" \
-            --message "$MSG" \
-            --yes \
-            --no-auto-commits 2>&1 | tee /tmp/aider-output.txt
+          run_aider() {
+            aider \
+              --model "$AIDER_MODEL" \
+              --weak-model "$AIDER_MODEL" \
+              --no-stream \
+              --edit-format whole \
+              --map-tokens 0 \
+              --no-git \
+              --no-show-model-warnings \
+              --no-check-update \
+              --read "$SKILL_CONTEXT" \
+              --read "$SKILL_FILE" \
+              --read /tmp/target-repo-readme.md \
+              "$BLOG_FILE" \
+              --message "$MSG" \
+              --yes \
+              --no-auto-commits 2>&1 | tee /tmp/aider-output.txt
+          }
 
-          # aider exits 0 on LLM errors. It also retries (e.g. on a 429 rate
-          # limit, 8K tokens/min on the Groq free plan) and a retry may still
-          # succeed, so an error line only fails the step if the entry is unfilled.
-          ERRORS="Empty response received|litellm\.[A-Za-z]*Error|RateLimitError|APIError|BadRequestError|AuthenticationError|NotFoundError"
-          if grep -qE "$ERRORS" /tmp/aider-output.txt; then
+          # aider exits 0 on LLM errors and retries blindly by itself for ~60 s
+          # (hard-coded in aider). On top of that: at most 3 attempts, waiting
+          # as long as the provider says ("try again in 35.4s"), else 60 s.
+          cp "$BLOG_FILE" /tmp/blog-skeleton.md
+          MAX_ATTEMPTS=3
+          for ATTEMPT in $(seq 1 $MAX_ATTEMPTS); do
+            echo "::group::aider attempt $ATTEMPT of $MAX_ATTEMPTS"
+            cp /tmp/blog-skeleton.md "$BLOG_FILE"
+            run_aider || true
+            echo "::endgroup::"
             if python3 .github/scripts/validate-blog-entry.py "$BLOG_FILE" >/dev/null; then
-              echo "::warning::aider reported an LLM problem but a retry filled the entry"
-            else
-              echo "::error::aider reported an LLM problem, see output above"
-              echo "::group::litellm debug call (exact request aider sends)"
-              LITELLM_DEBUG=1 python3 .github/scripts/litellm-debug.py "$AIDER_MODEL" || true
-              echo "::endgroup::"
-              exit 1
+              echo "Blog entry filled in attempt $ATTEMPT"
+              exit 0
             fi
-          fi
+            [ "$ATTEMPT" -eq "$MAX_ATTEMPTS" ] && break
+            WAIT=$(grep -oE 'try again in [0-9.]+s' /tmp/aider-output.txt | tail -1 | grep -oE '[0-9.]+' \
+              | awk '{ w = int($1) + 2; print (w > 70 ? 70 : w) }')
+            WAIT=${WAIT:-60}
+            echo "::warning::attempt $ATTEMPT did not fill the entry, waiting ${WAIT}s"
+            sleep "$WAIT"
+          done
+
+          echo "::error::aider did not fill the blog entry after $MAX_ATTEMPTS attempts, see output above"
+          echo "::group::litellm debug call (exact request aider sends)"
+          LITELLM_DEBUG=1 python3 .github/scripts/litellm-debug.py "$AIDER_MODEL" || true
+          echo "::endgroup::"
+          exit 1
 
       - name: Validate generated blog entry
         run: |
