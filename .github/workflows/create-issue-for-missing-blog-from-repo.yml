@@ -97,7 +97,11 @@ jobs:
 
               // Old rule: any blog content contains link to this repo
               const repoUrl = `https://github.com/roebi/${repoName}`;
-              const hasOldRuleMatch = blogContents.some(c => c.includes(repoUrl));
+              // exact repo link: the name must not continue, otherwise repo
+              // "roebi" would match every link to "roebi-..." repos
+              const escapedUrl = repoUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const repoUrlPattern = new RegExp(escapedUrl + '(?![\\w.-])', 'i');
+              const hasOldRuleMatch = blogContents.some(c => repoUrlPattern.test(c));
 
               if (hasNewRuleMatch || hasOldRuleMatch) {
                 console.log(`SKIP (has blog): ${repoName}`);
@@ -106,7 +110,9 @@ jobs:
               }
 
               // Check wontfix
-              const hasWontfix = wontfixTitles.some(t => t.includes(repoName.toLowerCase()));
+              // exact title match (substring match let "roebi" match "create blog entry for roebi-ai")
+              const issueTitle = `create blog entry for ${repoName}`;
+              const hasWontfix = wontfixTitles.includes(issueTitle.toLowerCase());
               if (hasWontfix) {
                 console.log(`SKIP (wontfix): ${repoName}`);
                 skipped++;
@@ -114,8 +120,7 @@ jobs:
               }
 
               // Check if open issue already exists
-              const issueTitle = `create blog entry for ${repoName}`;
-              const hasOpenIssue = openIssueTitles.some(t => t.includes(repoName.toLowerCase()));
+              const hasOpenIssue = openIssueTitles.includes(issueTitle.toLowerCase());
               if (hasOpenIssue) {
                 console.log(`SKIP (open issue exists): ${repoName}`);
                 skipped++;
