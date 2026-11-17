@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
-"""Diagnose the aider -> litellm -> GitHub Models connection.
+"""Check the LLM connection aider will use (aider talks to models via litellm).
 
-Sends one tiny request the same way aider does (litellm, provider "openai",
-OPENAI_API_BASE / OPENAI_API_KEY from env) with litellm debug logging on,
-so the job log shows the exact URL, headers (key masked) and raw response.
+Sends one tiny request through litellm and fails unless a real, non-empty
+chat answer comes back. API keys come from the environment
+(e.g. GROQ_API_KEY). Set LITELLM_DEBUG=1 to log the exact request/response.
+Usage: litellm-debug.py <litellm-model>   e.g. groq/llama-3.3-70b-versatile
 """
 import os
 import sys
 
 import litellm
 
-litellm._turn_on_debug()
-model = sys.argv[1] if len(sys.argv) > 1 else "openai/openai/gpt-4o"
-print(f"model={model} api_base={os.environ.get('OPENAI_API_BASE')}")
+if os.environ.get("LITELLM_DEBUG") == "1":
+    litellm._turn_on_debug()
+
+model = sys.argv[1]
+print(f"model={model}")
 try:
     r = litellm.completion(
         model=model,
@@ -20,7 +23,12 @@ try:
         max_tokens=5,
         num_retries=0,
     )
-    print("ANSWER:", r.choices[0].message.content)
+    answer = (r.choices[0].message.content or "").strip()
 except Exception as e:  # noqa: BLE001 - we want every failure printed
-    print(f"FAILED: {type(e).__name__}: {e}")
+    print(f"::error::LLM call failed: {type(e).__name__}: {e}")
     sys.exit(1)
+
+if not answer:
+    print("::error::LLM returned an empty answer")
+    sys.exit(1)
+print(f"LLM reachable, answer: {answer!r}")
