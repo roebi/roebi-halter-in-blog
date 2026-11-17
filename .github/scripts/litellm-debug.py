@@ -5,21 +5,29 @@ Sends one tiny request through litellm and fails unless a real, non-empty
 chat answer comes back. API keys come from the environment
 (e.g. GROQ_API_KEY). Set LITELLM_DEBUG=1 to log the exact request/response.
 
-With --need-tokens N it also reads the provider's rate-limit headers
-(x-ratelimit-remaining-tokens / x-ratelimit-reset-tokens, Groq: tokens per
-minute) and, if fewer than N tokens are left, waits until the window resets
-(max 65 s) so the following aider call is not rate limited.
+With --need-tokens N (Groq models only) it then makes one direct request to
+the Groq API, because litellm does not pass the rate-limit headers through.
+From x-ratelimit-remaining-tokens / x-ratelimit-reset-tokens (tokens per
+minute) it waits until the window resets if fewer than N tokens are left,
+and on HTTP 429 it waits as long as retry-after says. At most 3 probes and
+65 s per wait, so the following aider call starts with a full token budget.
 
 Usage: litellm-debug.py <litellm-model> [--need-tokens N]
        e.g. litellm-debug.py groq/openai/gpt-oss-120b --need-tokens 7000
+Env:   GROQ_API_BASE overrides https://api.groq.com/openai/v1 (for tests)
 """
 import argparse
+import json
 import os
 import re
 import sys
 import time
+import urllib.error
+import urllib.request
 
 MAX_WAIT_SECONDS = 65  # tokens-per-minute window is 60 s
+MAX_PROBES = 3
+GROQ_API_BASE = "https://api.groq.com/openai/v1"
 
 
 def parse_duration(value: str) -> float:
@@ -38,9 +46,9 @@ def parse_duration(value: str) -> float:
 
 
 def header(headers: dict, name: str) -> str | None:
-    """Find a provider header, plain or with litellm's 'llm_provider-' prefix."""
+    """Case-insensitive header lookup."""
     lowered = {str(k).lower(): v for k, v in (headers or {}).items()}
-    return lowered.get(name) or lowered.get(f"llm_provider-{name}")
+    return lowered.get(name)
 
 
 def seconds_to_wait(headers: dict, need_tokens: int) -> float:
@@ -52,6 +60,58 @@ def seconds_to_wait(headers: dict, need_tokens: int) -> float:
         return 0.0
     reset = parse_duration(header(headers, "x-ratelimit-reset-tokens") or "")
     return min(reset + 1, MAX_WAIT_SECONDS) if reset else MAX_WAIT_SECONDS
+
+
+def groq_probe(model_id: str, api_key: str, base: str) -> tuple[int, dict]:
+    """One tiny direct chat request; returns (HTTP status, response headers)."""
+    body = json.dumps(
+        {"model": model_id, "messages": [{"role": "user", "content": "Say OK"}], "max_tokens": 16}
+    ).encode()
+    req = urllib.request.Request(
+        f"{base}/chat/completions",
+        data=body,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "User-Agent": "blog-workflow-token-check",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return resp.status, dict(resp.headers)
+    except urllib.error.HTTPError as e:
+        return e.code, dict(e.headers or {})
+
+
+def wait_for_groq_tokens(model: str, need_tokens: int, sleep=time.sleep, probe=groq_probe) -> None:
+    """Probe Groq directly and wait until need_tokens fit into the TPM window."""
+    api_key = os.environ.get("GROQ_API_KEY", "")
+    base = os.environ.get("GROQ_API_BASE", GROQ_API_BASE).rstrip("/")
+    model_id = model.split("/", 1)[1]  # groq/openai/gpt-oss-120b -> openai/gpt-oss-120b
+    for attempt in range(1, MAX_PROBES + 1):
+        status, headers = probe(model_id, api_key, base)
+        if status == 429:
+            wait = min(parse_duration(header(headers, "retry-after") or "") + 1, MAX_WAIT_SECONDS)
+            wait = wait if wait > 1 else MAX_WAIT_SECONDS
+            print(f"token probe {attempt}: rate limited (429), waiting {wait:.0f}s")
+            sleep(wait)
+            continue
+        if status != 200:
+            print(f"::warning::token probe got HTTP {status}, not waiting")
+            return
+        remaining = header(headers, "x-ratelimit-remaining-tokens")
+        if remaining is None:
+            print("::notice::no rate-limit headers from Groq, not waiting")
+            return
+        wait = seconds_to_wait(headers, need_tokens)
+        print(f"token probe {attempt}: {remaining} tokens left this minute, needed: {need_tokens}")
+        if not wait:
+            return
+        print(f"waiting {wait:.0f}s for the tokens-per-minute window to reset")
+        sleep(wait)
+        return  # window has reset, aider can start
+    print(f"::warning::still rate limited after {MAX_PROBES} probes, aider will retry by itself")
 
 
 def main() -> None:
@@ -86,16 +146,10 @@ def main() -> None:
     print(f"LLM reachable, answer: {answer!r}")
 
     if args.need_tokens:
-        headers = (getattr(r, "_hidden_params", None) or {}).get("additional_headers") or {}
-        remaining = header(headers, "x-ratelimit-remaining-tokens")
-        if remaining is None:
-            print("::notice::no rate-limit headers from provider, not waiting")
-            return
-        wait = seconds_to_wait(headers, args.need_tokens)
-        print(f"tokens left this minute: {remaining}, needed: {args.need_tokens}")
-        if wait:
-            print(f"waiting {wait:.0f}s for the tokens-per-minute window to reset")
-            time.sleep(wait)
+        if args.model.startswith("groq/"):
+            wait_for_groq_tokens(args.model, args.need_tokens)
+        else:
+            print("::notice::token wait is only implemented for groq/ models")
 
 
 if __name__ == "__main__":
