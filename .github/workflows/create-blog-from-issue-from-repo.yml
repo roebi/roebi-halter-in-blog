@@ -18,6 +18,7 @@ jobs:
       contents: write
       pull-requests: write
       issues: read
+      models: read   # GitHub Models (LLM for aider) via GITHUB_TOKEN
 
     steps:
       - name: Checkout blog repo
@@ -41,55 +42,42 @@ jobs:
           echo "blog_file=${BLOG_FILE}" >> $GITHUB_OUTPUT
           echo "today=${TODAY}" >> $GITHUB_OUTPUT
 
-      - name: Fetch README.md of target repo
-        id: readme
+      - name: Fetch repo metadata, README and license of target repo
+        id: repo
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_NAME: ${{ steps.vars.outputs.repo_name }}
         run: |
-          README_URL="https://raw.githubusercontent.com/roebi/${{ steps.vars.outputs.repo_name }}/main/README.md"
-          if curl -sf -H "Authorization: token $GH_TOKEN" "$README_URL" -o /tmp/target-README.md; then
-            echo "found=true" >> $GITHUB_OUTPUT
-            echo "README.md fetched successfully"
+          API="https://api.github.com/repos/roebi/${REPO_NAME}"
+          AUTH="Authorization: Bearer $GH_TOKEN"
+
+          # Default branch is only reported (links use HEAD, see blog skeleton)
+          DEFAULT_BRANCH=$(curl -sf -H "$AUTH" "$API" | jq -r '.default_branch // "unknown"')
+          echo "default_branch=${DEFAULT_BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "Default branch: ${DEFAULT_BRANCH}"
+
+          # README via API: works for any default branch and any README file name
+          if curl -sf -H "$AUTH" -H "Accept: application/vnd.github.raw+json" "$API/readme" -o /tmp/target-README.md; then
+            echo "README.md fetched"
             head -5 /tmp/target-README.md
           else
-            # try master branch
-            README_URL_MASTER="https://raw.githubusercontent.com/roebi/${{ steps.vars.outputs.repo_name }}/master/README.md"
-            if curl -sf -H "Authorization: token $GH_TOKEN" "$README_URL_MASTER" -o /tmp/target-README.md; then
-              echo "found=true" >> $GITHUB_OUTPUT
-              echo "README.md fetched from master branch"
-            else
-              echo "found=false" >> $GITHUB_OUTPUT
-              echo "# No README found" > /tmp/target-README.md
-            fi
+            echo "::warning::No README found for ${REPO_NAME}"
+            echo "# No README found" > /tmp/target-README.md
           fi
 
-      - name: Detect license type
-        id: license
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          LICENSE_URL="https://raw.githubusercontent.com/roebi/${{ steps.vars.outputs.repo_name }}/main/LICENSE"
-          LICENSE_CONTENT=$(curl -sf -H "Authorization: token $GH_TOKEN" "$LICENSE_URL" | head -20 || echo "")
-          if echo "$LICENSE_CONTENT" | grep -qi "MIT"; then
-            echo "type=MIT License" >> $GITHUB_OUTPUT
-          elif echo "$LICENSE_CONTENT" | grep -qi "Apache"; then
-            echo "type=Apache 2.0 License" >> $GITHUB_OUTPUT
-          elif echo "$LICENSE_CONTENT" | grep -qi "GNU GENERAL PUBLIC LICENSE.*Version 3"; then
-            echo "type=GPL-3.0 License" >> $GITHUB_OUTPUT
-          elif echo "$LICENSE_CONTENT" | grep -qi "GNU GENERAL PUBLIC LICENSE.*Version 2"; then
-            echo "type=GPL-2.0 License" >> $GITHUB_OUTPUT
-          elif echo "$LICENSE_CONTENT" | grep -qi "GNU LESSER"; then
-            echo "type=LGPL License" >> $GITHUB_OUTPUT
-          elif echo "$LICENSE_CONTENT" | grep -qi "Mozilla Public License"; then
-            echo "type=MPL-2.0 License" >> $GITHUB_OUTPUT
-          elif echo "$LICENSE_CONTENT" | grep -qi "BSD"; then
-            echo "type=BSD License" >> $GITHUB_OUTPUT
-          elif echo "$LICENSE_CONTENT" | grep -qi "ISC"; then
-            echo "type=ISC License" >> $GITHUB_OUTPUT
+          # License via API: GitHub detects the license type (SPDX) for us
+          if LICENSE_JSON=$(curl -sf -H "$AUTH" "$API/license"); then
+            LICENSE_NAME=$(echo "$LICENSE_JSON" | jq -r '.license.name // "LICENSE"')
+            LICENSE_PATH=$(echo "$LICENSE_JSON" | jq -r '.path // "LICENSE"')
+            [ "$LICENSE_NAME" = "Other" ] && LICENSE_NAME="LICENSE"
           else
-            echo "type=LICENSE" >> $GITHUB_OUTPUT
+            echo "::warning::No LICENSE found for ${REPO_NAME}"
+            LICENSE_NAME="LICENSE"
+            LICENSE_PATH="LICENSE"
           fi
-          echo "Detected license: $(cat $GITHUB_OUTPUT | grep type | cut -d= -f2)"
+          echo "license_name=${LICENSE_NAME}" >> "$GITHUB_OUTPUT"
+          echo "license_path=${LICENSE_PATH}" >> "$GITHUB_OUTPUT"
+          echo "Detected license: ${LICENSE_NAME} (${LICENSE_PATH})"
 
       - name: Create feature branch
         run: |
@@ -101,7 +89,8 @@ jobs:
         run: |
           REPO_NAME="${{ steps.vars.outputs.repo_name }}"
           TODAY="${{ steps.vars.outputs.today }}"
-          LICENSE_TYPE="${{ steps.license.outputs.type }}"
+          LICENSE_NAME="${{ steps.repo.outputs.license_name }}"
+          LICENSE_PATH="${{ steps.repo.outputs.license_path }}"
           BLOG_FILE="${{ steps.vars.outputs.blog_file }}"
 
           cat > "$BLOG_FILE" << BLOGEOF
@@ -119,8 +108,8 @@ jobs:
 
           ## Links
 
-          - [README](https://github.com/roebi/${REPO_NAME}/blob/main/README.md)
-          - [${LICENSE_TYPE}](https://github.com/roebi/${REPO_NAME}/blob/main/LICENSE)
+          - [README](https://github.com/roebi/${REPO_NAME}/blob/HEAD/README.md)
+          - [${LICENSE_NAME}](https://github.com/roebi/${REPO_NAME}/blob/HEAD/${LICENSE_PATH})
           BLOGEOF
           echo "Blog skeleton created at $BLOG_FILE"
           cat "$BLOG_FILE"
@@ -134,9 +123,28 @@ jobs:
         run: |
           pip install aider-chat aider-skills --break-system-packages
 
+      - name: Check GitHub Models is reachable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # aider exits 0 even if every LLM call fails, so check access first
+          HTTP_CODE=$(curl -s -o /tmp/models-check.json -w "%{http_code}" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"model":"openai/gpt-4o","messages":[{"role":"user","content":"Say OK"}],"max_tokens":5}' \
+            https://models.github.ai/inference/chat/completions)
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::GitHub Models call failed with HTTP $HTTP_CODE"
+            cat /tmp/models-check.json
+            exit 1
+          fi
+          echo "GitHub Models reachable"
+
       - name: Run aider to fill description and What is this about section
         env:
-          OPENAI_API_BASE: https://models.inference.ai.azure.com
+          # GitHub Models (OpenAI compatible). The old endpoint
+          # models.inference.ai.azure.com is deprecated.
+          OPENAI_API_BASE: https://models.github.ai/inference
           OPENAI_API_KEY: ${{ secrets.GITHUB_TOKEN }}
         run: |
           REPO_NAME="${{ steps.vars.outputs.repo_name }}"
@@ -153,17 +161,26 @@ jobs:
              Middle sentences: key features, use cases, or motivation.
              Last sentence: who benefits or how to get started.
           Base your writing on the content of the provided README.md file.
+          Keep the HTML comment line in the What is this about section and write the sentences below it.
           Do NOT change any other part of the file - only fill description and the What is this about section."
 
           aider \
-            --model openai/gpt-4o \
-            --weak-model openai/gpt-4o \
+            --model openai/openai/gpt-4o \
+            --weak-model openai/openai/gpt-4o \
+            --no-show-model-warnings \
+            --no-check-update \
             --read "$SKILL_CONTEXT" \
             --read /tmp/target-README.md \
             "$BLOG_FILE" \
             --message "$MSG" \
             --yes \
             --no-auto-commits
+
+      - name: Validate generated blog entry
+        run: |
+          # fail here instead of opening a PR with an empty skeleton
+          python3 .github/scripts/validate-blog-entry.py "${{ steps.vars.outputs.blog_file }}"
+          cat "${{ steps.vars.outputs.blog_file }}"
 
       - name: Commit and push feature branch
         run: |
@@ -180,6 +197,8 @@ jobs:
             --body "Closes #${{ steps.vars.outputs.issue_number }}
 
           Blog entry generated for [${{ steps.vars.outputs.repo_name }}](https://github.com/roebi/${{ steps.vars.outputs.repo_name }}).
+
+          Default branch of the repo: \`${{ steps.repo.outputs.default_branch }}\` (blog links use \`HEAD\`, so they keep working after a rename master → main).
 
           Please review the generated content before merging." \
             --base master \

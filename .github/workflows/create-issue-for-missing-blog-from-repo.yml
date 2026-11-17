@@ -124,20 +124,30 @@ jobs:
 
               // Create the issue
               console.log(`CREATE issue: ${issueTitle}`);
+              // Suggest switching old git-2-style default branch "master" to "main"
+              const branchHint = repo.default_branch !== 'main'
+                ? [
+                    `## Hint: default branch is \`${repo.default_branch}\``,
+                    ``,
+                    `Consider renaming it to \`main\` (Settings → General → Default branch). Blog links use \`HEAD\`, so they keep working after the rename.`,
+                    ``,
+                  ]
+                : [];
               const body = [
                 `## Blog entry missing for: [${repoName}](${repoUrl})`,
                 ``,
                 `| Resource | Link |`,
                 `|----------|------|`,
                 `| Repository | ${repoUrl} |`,
-                `| README | ${repoUrl}/blob/main/README.md |`,
-                `| LICENSE | ${repoUrl}/blob/main/LICENSE |`,
-                `| Workflows | ${repoUrl}/tree/main/.github/workflows |`,
+                `| README | ${repoUrl}/blob/HEAD/README.md |`,
+                `| LICENSE | ${repoUrl}/blob/HEAD/LICENSE |`,
+                `| Workflows | ${repoUrl}/tree/HEAD/.github/workflows |`,
                 ``,
+                ...branchHint,
                 `## Decision`,
                 ``,
-                `- Add label \`newblogpost\` + remove \`triage\` → blog entry will be created automatically`,
-                `- Add label \`wontfix\` + remove \`triage\` → never create issue for this repo again`,
+                `- Add label \`newblogpost\` → blog entry PR will be created automatically`,
+                `- Add label \`wontfix\` → never create issue for this repo again`,
               ].join('\n');
 
               await github.rest.issues.create({
