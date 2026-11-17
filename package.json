@@ -30,6 +30,11 @@
     "underscore": ">=1.13.8",
     "typescript": "<7"
   },
+  "overrides": {
+    "jsonpath": {
+      "underscore": ">=1.13.8"
+    }
+  },
   "devDependencies": {
     "husky": "^9.1.7",
     "prettier": "^3.10.1",
