@@ -123,22 +123,30 @@ jobs:
         run: |
           pip install aider-chat aider-skills --break-system-packages
 
+      - name: Validate skill with aider-skills
+        run: |
+          aider-skills validate skills/create-blog-entry-what-is-this-about
+          aider-skills list skills/
+
       - name: Check GitHub Models is reachable
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # aider exits 0 even if every LLM call fails, so check access first
+          # aider exits 0 even if every LLM call fails, so check access first.
+          # HTTP 200 alone is not enough: the body must be a real chat answer.
           HTTP_CODE=$(curl -s -o /tmp/models-check.json -w "%{http_code}" \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
             -d '{"model":"openai/gpt-4o","messages":[{"role":"user","content":"Say OK"}],"max_tokens":5}' \
             https://models.github.ai/inference/chat/completions)
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "::error::GitHub Models call failed with HTTP $HTTP_CODE"
-            cat /tmp/models-check.json
+          echo "HTTP $HTTP_CODE, body:"
+          cat /tmp/models-check.json; echo
+          if [ "$HTTP_CODE" != "200" ] || ! jq -e '.choices[0].message.content' /tmp/models-check.json >/dev/null 2>&1; then
+            echo "::error::GitHub Models did not return a chat answer (HTTP $HTTP_CODE)"
             exit 1
           fi
-          echo "GitHub Models reachable"
+          echo "GitHub Models reachable, model: $(jq -r '.model' /tmp/models-check.json)"
 
       - name: Run aider to fill description and What is this about section
         env:
@@ -150,7 +158,11 @@ jobs:
           REPO_NAME="${{ steps.vars.outputs.repo_name }}"
           BLOG_FILE="${{ steps.vars.outputs.blog_file }}"
 
+          # aider-skills gives the skill index (<available_skills>). In a one-shot
+          # --message run aider cannot open the listed SKILL.md on its own,
+          # so the skill body is passed with --read as well.
           SKILL_CONTEXT=$(aider-skills tmpfile skills/)
+          SKILL_FILE=skills/create-blog-entry-what-is-this-about/SKILL.md
 
           MSG="You are filling a blog entry file for the GitHub repository '${REPO_NAME}'.
           The file already has a skeleton with empty description and empty What is this about section.
@@ -180,7 +192,9 @@ jobs:
             --no-gitignore \
             --no-show-model-warnings \
             --no-check-update \
+            --openai-api-base "$OPENAI_API_BASE" \
             --read "$SKILL_CONTEXT" \
+            --read "$SKILL_FILE" \
             --read /tmp/target-README-short.md \
             "$BLOG_FILE" \
             --message "$MSG" \
@@ -190,6 +204,9 @@ jobs:
           # aider exits 0 on LLM errors, so look for them in its output
           if grep -qE "Empty response received|litellm\.[A-Za-z]*Error|tokens_limit_reached|RateLimitError|APIError|BadRequestError|AuthenticationError" /tmp/aider-output.txt; then
             echo "::error::aider reported an LLM problem, see output above"
+            echo "::group::litellm debug call (exact request aider sends)"
+            python3 .github/scripts/litellm-debug.py openai/openai/gpt-4o || true
+            echo "::endgroup::"
             exit 1
           fi
 
