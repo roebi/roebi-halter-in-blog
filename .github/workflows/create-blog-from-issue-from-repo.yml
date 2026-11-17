@@ -23,7 +23,7 @@ jobs:
       # LLM for aider via litellm. GitHub Models was retired on 2026-07-30.
       # Override without code change: repo variable AIDER_MODEL
       # (Settings -> Secrets and variables -> Actions -> Variables).
-      AIDER_MODEL: ${{ vars.AIDER_MODEL || 'groq/llama-3.3-70b-versatile' }}
+      AIDER_MODEL: ${{ vars.AIDER_MODEL || 'groq/openai/gpt-oss-120b' }}
 
     steps:
       - name: Checkout blog repo

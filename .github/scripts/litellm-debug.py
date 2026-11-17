@@ -4,7 +4,7 @@
 Sends one tiny request through litellm and fails unless a real, non-empty
 chat answer comes back. API keys come from the environment
 (e.g. GROQ_API_KEY). Set LITELLM_DEBUG=1 to log the exact request/response.
-Usage: litellm-debug.py <litellm-model>   e.g. groq/llama-3.3-70b-versatile
+Usage: litellm-debug.py <litellm-model>   e.g. groq/openai/gpt-oss-120b
 """
 import os
 import sys
@@ -20,7 +20,9 @@ try:
     r = litellm.completion(
         model=model,
         messages=[{"role": "user", "content": "Say OK"}],
-        max_tokens=5,
+        # reasoning models (e.g. gpt-oss) spend tokens on thinking first;
+        # a tiny limit would end before any answer text is written
+        max_tokens=300,
         num_retries=0,
     )
     answer = (r.choices[0].message.content or "").strip()
