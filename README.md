@@ -1,3 +1,62 @@
+# roebi-halter-in-blog
+
+Personal blog built with [Astro](https://astro.build), deployed to GitHub Pages:
+https://roebi.github.io/roebi-halter-in-blog/
+
+Each of my GitHub repositories can get its own blog entry. The
+[topic pages](https://roebi.github.io/roebi-halter-in-blog/topic/) are generated at build time
+from the GitHub topics of those repositories: set topics on a repo, and its blog entry shows up there.
+
+## From GitHub repo to blog entry (automated)
+
+```mermaid
+flowchart LR
+  A[new repo<br>roebi/x] --> B[issue<br>create blog entry for x]
+  B -- label newblogpost --> C[bot PR<br>src/content/blog/x.md]
+  C -- review + merge --> D[deploy<br>blog + topic pages]
+```
+
+1. **Issue per repo** – run the workflow **Create Issue for Missing Blog from Repo**
+   (`create-issue-for-missing-blog-from-repo.yml`, Actions → Run workflow).
+   It opens an issue `create blog entry for <repo>` for every own, non-fork repo that has
+   no blog entry, no open issue and no `wontfix` issue yet.
+2. **Decide** on the issue:
+   - label `newblogpost` → the blog entry is created automatically
+   - label `wontfix` → this repo never gets an issue again
+3. **Blog entry** – `create-blog-from-issue-from-repo.yml` (runs on the label, only for
+   issues opened by `github-actions[bot]`):
+   - fetches README and license of the repo via the GitHub API
+   - writes the skeleton `src/content/blog/<repo>.md` (`githubName` = repo name, links with `blob/HEAD/`)
+   - runs [aider](https://aider.chat) with [aider-skills](https://pypi.org/project/aider-skills/) and the
+     skill [`skills/create-blog-entry-what-is-this-about`](skills/create-blog-entry-what-is-this-about/SKILL.md)
+     to fill `description` and `## What is this about?`
+   - validates the result (`.github/scripts/validate-blog-entry.py`), commits and opens a PR `Closes #<issue>`
+4. **Review and merge** the PR → `astro.yml` deploys → blog entry and topic pages are live.
+
+Re-run for an issue: remove and re-add the label `newblogpost` (the bot branch and an open PR are replaced).
+
+### Setup
+
+| What           | Where                                                      | Value                                                                |
+| -------------- | ---------------------------------------------------------- | -------------------------------------------------------------------- |
+| `GROQ_API_KEY` | Settings → Secrets and variables → Actions → **Secrets**   | API key from [console.groq.com](https://console.groq.com) (required) |
+| `AIDER_MODEL`  | Settings → Secrets and variables → Actions → **Variables** | optional, default `groq/openai/gpt-oss-120b` (litellm model name)    |
+
+### Limits and good to know
+
+- Groq free plan for `openai/gpt-oss-120b`: 8K tokens per minute, 200K per day. One blog entry needs
+  about 6K tokens, so label **one issue at a time**, about a minute apart.
+- The workflow waits for Groq's token window, tries aider at most 3 times and stops after 15 minutes.
+- aider runs with `--no-git`, so it only sees the files the workflow gives it.
+- Review the generated text before merging: the validation checks form, not content.
+- The license link says `LICENSE` when GitHub cannot name the license (e.g. dual licensed repos).
+- Issues and PRs opened by the bot do not trigger other workflows (no `triage` label, no CI on the PR).
+- GitHub API calls use REST API version `2026-03-10`.
+
+History and decisions: issue [#410](https://github.com/roebi/roebi-halter-in-blog/issues/410).
+
+# Project setup log
+
 # add Prettier Plugin for Astro
 
 ```
