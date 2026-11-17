@@ -219,12 +219,20 @@ jobs:
         run: |
           git add ${{ steps.vars.outputs.blog_file }}
           git commit -m "blog: create blog entry for ${{ steps.vars.outputs.repo_name }}"
-          git push origin ${{ steps.vars.outputs.branch_name }}
+          # The branch belongs to this workflow only. A re-run (label removed
+          # and re-added) replaces it, also if an old closed PR left it behind.
+          git push --force origin ${{ steps.vars.outputs.branch_name }}
 
       - name: Create Pull Request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # On a re-run with a still open PR, the force push above already updated it
+          OPEN_PR=$(gh pr list --head "${{ steps.vars.outputs.branch_name }}" --state open --json url --jq '.[0].url')
+          if [ -n "$OPEN_PR" ]; then
+            echo "Open PR already exists and was updated: $OPEN_PR"
+            exit 0
+          fi
           gh pr create \
             --title "create blog entry for ${{ steps.vars.outputs.repo_name }}" \
             --body "Closes #${{ steps.vars.outputs.issue_number }}
